@@ -1,0 +1,5 @@
+venv
+CAT_admin_tool.egg-info
+.eggs
+__pycache__
+main.sym
