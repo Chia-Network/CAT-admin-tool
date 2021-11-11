@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open("README.md", "rt") as fh:
     long_description = fh.read()
@@ -15,10 +15,11 @@ dev_dependencies = [
 
 setup(
     name="CAT_admin_tool",
-    version="1.0.4",
+    version="0.0.1",
     author="Quexington",
+    packages=find_packages(exclude=("tests",)),
     entry_points={
-        "console_scripts": ["cats = cmds:main"],
+        "console_scripts": ["cats = cats.cats:main"],
     },
     author_email="m.hauff@chia.net",
     setup_requires=["setuptools_scm"],
