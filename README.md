@@ -7,7 +7,7 @@ Install
 **Ubuntu/MacOSs**
 ```
 git clone https://github.com/Chia-Network/CAT-admin-tool.git
-cd cat-admin-tool
+cd CAT-admin-tool
 python3 -m venv venv
 . ./venv/bin/activate
 pip install .
@@ -17,7 +17,7 @@ pip install .
 **Windows Powershell**
 ```
 git clone https://github.com/Chia-Network/CAT-admin-tool.git
-cd cat-admin-tool
+cd CAT-admin-tool
 py -m venv venv
 ./venv/Scripts/activate
 pip install .
