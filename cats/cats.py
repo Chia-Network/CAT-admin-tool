@@ -199,7 +199,7 @@ def cli(
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
-        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount]])
+        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount, [address]]])
     )
 
     # Wrap the intermediate puzzle in a CAT wrapper
