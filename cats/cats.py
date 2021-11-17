@@ -4,7 +4,7 @@ import asyncio
 import re
 import json
 
-from typing import Optional, Tuple, Iterable, Union
+from typing import Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -53,6 +53,16 @@ async def get_signed_tx(ph, amt, fee):
     finally:
         wallet_client.close()
         await wallet_client.await_closed()
+
+
+# The clvm loaders in this library automatically search for includable files in the directory './include'
+def append_include(search_paths: Iterable[str]) -> List[str]:
+    if search_paths:
+        search_list = list(search_paths)
+        search_list.append("./include")
+        return search_list
+    else:
+        return ["./include"]
 
 
 def parse_program(program: Union[str, Program], include: Iterable = []) -> Program:
