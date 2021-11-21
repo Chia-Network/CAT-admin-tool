@@ -4,9 +4,10 @@ import asyncio
 import re
 import json
 
-from typing import Optional, Tuple, Iterable, Union
+from typing import Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
 
+from chia.cmds.wallet_funcs import get_wallet
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.config import load_config
@@ -44,15 +45,26 @@ async def get_client() -> Optional[WalletRpcClient]:
         return None
 
 
-async def get_signed_tx(ph, amt, fee):
+async def get_signed_tx(fingerprint, ph, amt, fee):
     try:
         wallet_client: WalletRpcClient = await get_client()
+        wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
         return await wallet_client.create_signed_transaction(
             [{"puzzle_hash": ph, "amount": amt}], fee=fee
         )
     finally:
         wallet_client.close()
         await wallet_client.await_closed()
+
+
+# The clvm loaders in this library automatically search for includable files in the directory './include'
+def append_include(search_paths: Iterable[str]) -> List[str]:
+    if search_paths:
+        search_list = list(search_paths)
+        search_list.append("./include")
+        return search_list
+    else:
+        return ["./include"]
 
 
 def parse_program(program: Union[str, Program], include: Iterable = []) -> Program:
@@ -118,12 +130,18 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="The amount to issue in mojos (regular XCH will be used to fund this)",
 )
 @click.option(
-    "-f",
+    "-m",
     "--fee",
     required=True,
     default=0,
     show_default=True,
     help="The XCH fee to use for this issuance",
+)
+@click.option(
+    "-f",
+    "--fingerprint",
+    type=int,
+    help="The wallet fingerprint to use as funds",
 )
 @click.option(
     "-sig",
@@ -157,6 +175,7 @@ def cli(
     send_to: str,
     amount: int,
     fee: int,
+    fingerprint: int,
     signature: Tuple[str],
     spend: Tuple[str],
     as_bytes: bool,
@@ -189,7 +208,7 @@ def cli(
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
-        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount]])
+        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount, [address]]])
     )
 
     # Wrap the intermediate puzzle in a CAT wrapper
@@ -198,7 +217,7 @@ def cli(
 
     # Get a signed transaction from the wallet
     signed_tx = asyncio.get_event_loop().run_until_complete(
-        get_signed_tx(cat_ph, amount, fee)
+        get_signed_tx(fingerprint, cat_ph, amount, fee)
     )
     eve_coin = list(
         filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
