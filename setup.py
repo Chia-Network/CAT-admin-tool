@@ -8,8 +8,8 @@ with open("README.md", "rt") as fh:
 dependencies = [
     "aiohttp~=3.7",
     "blspy~=1.0",
-    "click~=7.1",
     "chia-blockchain@git+https://github.com/Chia-Network/chia-blockchain.git@protocol_and_cats_rebased#23d571d9bb6b5003b49dee7ee31c1799358c5349",
+    "click~=7.1",
 ]
 
 dev_dependencies = [
