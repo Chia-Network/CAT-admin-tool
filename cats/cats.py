@@ -257,7 +257,7 @@ def cli(
     if as_bytes:
         final_bundle = bytes(final_bundle).hex()
     else:
-        final_bundle = json.dumps(final_bundle, sort_keys=True, indent=4)
+        final_bundle = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
 
     print(f"Asset ID: {curried_tail.get_tree_hash()}")
     print(f"Spend Bundle: {final_bundle}")
