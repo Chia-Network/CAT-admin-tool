@@ -17,11 +17,11 @@ from chia.types.blockchain_format.program import Program
 from clvm_tools.clvmc import compile_clvm_text
 from clvm_tools.binutils import assemble
 from chia.types.spend_bundle import SpendBundle
-from chia.wallet.cc_wallet.cc_utils import (
-    construct_cc_puzzle,
-    CC_MOD,
-    SpendableCC,
-    unsigned_spend_bundle_for_spendable_ccs,
+from chia.wallet.cat_wallet.cat_utils import (
+    construct_cat_puzzle,
+    CAT_MOD,
+    SpendableCAT,
+    unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.util.bech32m import decode_puzzle_hash
 
@@ -49,9 +49,19 @@ async def get_signed_tx(fingerprint, ph, amt, fee):
     try:
         wallet_client: WalletRpcClient = await get_client()
         wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
-        return await wallet_client.create_signed_transaction(
+        return await wallet_client_f.create_signed_transaction(
             [{"puzzle_hash": ph, "amount": amt}], fee=fee
         )
+    finally:
+        wallet_client.close()
+        await wallet_client.await_closed()
+
+
+async def push_tx(fingerprint, bundle):
+    try:
+        wallet_client: WalletRpcClient = await get_client()
+        wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
+        return await wallet_client_f.push_tx(bundle)
     finally:
         wallet_client.close()
         await wallet_client.await_closed()
@@ -212,7 +222,7 @@ def cli(
     )
 
     # Wrap the intermediate puzzle in a CAT wrapper
-    cat_puzzle = construct_cc_puzzle(CC_MOD, curried_tail.get_tree_hash(), p2_puzzle)
+    cat_puzzle = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), p2_puzzle)
     cat_ph = cat_puzzle.get_tree_hash()
 
     # Get a signed transaction from the wallet
@@ -226,15 +236,17 @@ def cli(
     # This is where we exit if we're only looking for the selected coin
     if select_coin:
         primary_coin = list(
-            filter(lambda c: c.name() == eve_coin.parent_coin_info, signed_tx.spend_bundle.removals())
+            filter(
+                lambda c: c.name() == eve_coin.parent_coin_info,
+                signed_tx.spend_bundle.removals(),
+            )
         )[0]
         print(json.dumps(primary_coin.to_json_dict(), sort_keys=True, indent=4))
         print(f"Name: {primary_coin.name()}")
         return
 
-
     # Create the CAT spend
-    spendable_eve = SpendableCC(
+    spendable_eve = SpendableCAT(
         eve_coin,
         curried_tail.get_tree_hash(),
         p2_puzzle,
@@ -242,7 +254,7 @@ def cli(
         limitations_solution=solution,
         limitations_program_reveal=curried_tail,
     )
-    eve_spend = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, [spendable_eve])
+    eve_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_eve])
 
     # Aggregate everything together
     final_bundle = SpendBundle.aggregate(
@@ -255,15 +267,29 @@ def cli(
     )
 
     if as_bytes:
-        final_bundle = bytes(final_bundle).hex()
+        final_bundle_dump = bytes(final_bundle).hex()
     else:
-        final_bundle = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
+        final_bundle_dump = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
+
+    confirmation = input(
+        "The transaction has been created, would you like to push it to the network? (Y/N)"
+    ) in ["y", "Y", "yes", "Yes"]
+    if confirmation:
+        response = asyncio.get_event_loop().run_until_complete(
+            push_tx(fingerprint, final_bundle)
+        )
+        if "error" in response:
+            print(f"Error pushing transaction: {response['error']}")
+            return
 
     print(f"Asset ID: {curried_tail.get_tree_hash()}")
-    print(f"Spend Bundle: {final_bundle}")
+    if not confirmation:
+        print(f"Spend Bundle: {final_bundle_dump}")
+
 
 def main():
     cli()
+
 
 if __name__ == "__main__":
     main()
