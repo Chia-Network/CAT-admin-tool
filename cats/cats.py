@@ -184,10 +184,10 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="Quiet mode will not ask to push transaction to the network",
 )
 @click.option(
-    "-y",
-    "--yes",
+    "-p",
+    "--pushtx",
     is_flag=True,
-    help="Automatically push transaction to the network",
+    help="Automatically push transaction to the network in quiet mode",
 )
 def cli(
     ctx: click.Context,
@@ -202,8 +202,8 @@ def cli(
     spend: Tuple[str],
     as_bytes: bool,
     select_coin: bool,
-    quiet_mode: bool,
-    auto_push: bool
+    quiet: bool,
+    pushtx: bool
 ):
     ctx.ensure_object(dict)
 
@@ -285,9 +285,9 @@ def cli(
     else:
         final_bundle_dump = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
 
-    confirmation = auto_push
+    confirmation = pushtx
 
-    if not quiet_mode:
+    if not quiet:
         confirmation = input(
             "The transaction has been created, would you like to push it to the network? (Y/N)"
         ) in ["y", "Y", "yes", "Yes"]
