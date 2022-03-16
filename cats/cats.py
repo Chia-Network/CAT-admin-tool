@@ -177,6 +177,18 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     is_flag=True,
     help="Stop the process once a coin from the wallet has been selected and return the coin",
 )
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    help="Quiet mode will not ask to push transaction to the network",
+)
+@click.option(
+    "-p",
+    "--push",
+    is_flag=True,
+    help="Automatically push transaction to the network in quiet mode",
+)
 def cli(
     ctx: click.Context,
     tail: str,
@@ -190,6 +202,8 @@ def cli(
     spend: Tuple[str],
     as_bytes: bool,
     select_coin: bool,
+    quiet: bool,
+    push: bool
 ):
     ctx.ensure_object(dict)
 
@@ -271,9 +285,12 @@ def cli(
     else:
         final_bundle_dump = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
 
-    confirmation = input(
-        "The transaction has been created, would you like to push it to the network? (Y/N)"
-    ) in ["y", "Y", "yes", "Yes"]
+    confirmation = push
+
+    if not quiet:
+        confirmation = input(
+            "The transaction has been created, would you like to push it to the network? (Y/N)"
+        ) in ["y", "Y", "yes", "Yes"]
     if confirmation:
         response = asyncio.get_event_loop().run_until_complete(
             push_tx(fingerprint, final_bundle)
