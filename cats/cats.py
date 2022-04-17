@@ -145,7 +145,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     required=True,
     default=0,
     show_default=True,
-    help="The XCH fee to use for this issuance",
+    help="The fees for the transaction, in mojos",
 )
 @click.option(
     "-f",
@@ -299,7 +299,7 @@ def cli(
             print(f"Error pushing transaction: {response['error']}")
             return
 
-    print(f"Asset ID: {curried_tail.get_tree_hash()}")
+    print(f"Successfully pushed the transaction to the network\nAsset ID: {curried_tail.get_tree_hash()}")
     if not confirmation:
         print(f"Spend Bundle: {final_bundle_dump}")
 
