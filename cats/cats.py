@@ -298,8 +298,10 @@ def cli(
         if "error" in response:
             print(f"Error pushing transaction: {response['error']}")
             return
+        print(f"Successfully pushed the transaction to the network")
 
-    print(f"Successfully pushed the transaction to the network\nAsset ID: {curried_tail.get_tree_hash()}")
+    print(f"Asset ID: {curried_tail.get_tree_hash()}")
+    
     if not confirmation:
         print(f"Spend Bundle: {final_bundle_dump}")
 
