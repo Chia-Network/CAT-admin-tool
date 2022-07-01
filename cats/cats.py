@@ -256,7 +256,7 @@ def cli(
             )
         )[0]
         print(json.dumps(primary_coin.to_json_dict(), sort_keys=True, indent=4))
-        print(f"Name: {primary_coin.name()}")
+        print(f"Name: {primary_coin.name().hex()}")
         return
 
     # Create the CAT spend
@@ -300,8 +300,7 @@ def cli(
             return
         print(f"Successfully pushed the transaction to the network")
 
-    print(f"Asset ID: {curried_tail.get_tree_hash()}")
-    
+    print(f"Asset ID: {curried_tail.get_tree_hash().hex()}")
     if not confirmation:
         print(f"Spend Bundle: {final_bundle_dump}")
 
