@@ -60,3 +60,10 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[Target]:
             current_batch = []
 
     return results
+
+def secure_the_bag(targets: List[Target], leaf_width: int) -> bytes32:
+    """
+    Calculates secure the bag root puzzle hash
+    """
+
+    return None
