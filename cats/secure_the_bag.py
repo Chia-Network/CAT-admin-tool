@@ -1,10 +1,15 @@
 from typing import List, Tuple
 
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from clvm.casts import int_to_bytes
+
+# Fees spend asserts this. Message not required as inner puzzle contains hardcoded coin spends and doesn't accept a solution.
+EMPTY_COIN_ANNOUNCEMENT = [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None]
+
 
 class Target:
     puzzle_hash: bytes32
@@ -61,9 +66,32 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[Target]:
 
     return results
 
+
 def secure_the_bag(targets: List[Target], leaf_width: int) -> bytes32:
     """
     Calculates secure the bag root puzzle hash
     """
 
-    return None
+    if len(targets) == 1:
+        return targets[0].puzzle_hash
+
+    results: List[Target] = []
+
+    batched_targets = batch_the_bag(targets, leaf_width)
+
+    for batch_targets in batched_targets:
+
+        list_of_conditions = [EMPTY_COIN_ANNOUNCEMENT]
+        total_amount = 0
+
+        for target in batch_targets:
+            list_of_conditions.append(target.create_coin_condition())
+            total_amount += target.amount
+
+        inner_puzzle = Program.to((1, list_of_conditions))
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        amount = total_amount
+
+        results.append(Target(inner_puzzle_hash, amount))
+
+    return secure_the_bag(results, leaf_width)
