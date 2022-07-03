@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -67,13 +67,13 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[Target]:
     return results
 
 
-def secure_the_bag(targets: List[Target], leaf_width: int) -> bytes32:
+def secure_the_bag(targets: List[Target], leaf_width: int, parent_puzzle_lookup: Dict[str, Program] = {}) -> bytes32:
     """
     Calculates secure the bag root puzzle hash
     """
 
     if len(targets) == 1:
-        return targets[0].puzzle_hash
+        return targets[0].puzzle_hash, parent_puzzle_lookup
 
     results: List[Target] = []
 
@@ -94,4 +94,7 @@ def secure_the_bag(targets: List[Target], leaf_width: int) -> bytes32:
 
         results.append(Target(inner_puzzle_hash, amount))
 
-    return secure_the_bag(results, leaf_width)
+        for target in batch_targets:
+            parent_puzzle_lookup[target.puzzle_hash.hex()] = inner_puzzle
+
+    return secure_the_bag(results, leaf_width, parent_puzzle_lookup)

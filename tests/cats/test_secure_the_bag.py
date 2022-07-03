@@ -152,7 +152,7 @@ def test_secure_the_bag():
         Target(target_2_puzzle_hash, target_2_amount),
         Target(target_3_puzzle_hash, target_3_amount)
     ]
-    root_hash = secure_the_bag(targets, 2)
+    root_hash, parent_puzzle_lookup = secure_the_bag(targets, 2)
 
     # Calculates correct root hash
     assert root_hash.hex() == "bbffed16fdfe5b4c79fced8d04d913a68ea4a028e843e4fb09df18d432713810"
@@ -244,3 +244,23 @@ def test_secure_the_bag():
 
     # Result of running node 2 is correct
     assert r.get_tree_hash().hex() == expected_result.get_tree_hash().hex()
+
+    # Parent puzzle lookup (used for puzzle reveals)
+
+    puzzle_create_target_1 = parent_puzzle_lookup.get(target_1_puzzle_hash.hex())
+    puzzle_create_target_2 = parent_puzzle_lookup.get(target_2_puzzle_hash.hex())
+    puzzle_create_target_3 = parent_puzzle_lookup.get(target_3_puzzle_hash.hex())
+
+    # Targets 1 & 2 are created by node 1
+    assert puzzle_create_target_1.get_tree_hash().hex() == node_1_puzzle_hash.hex()
+    assert puzzle_create_target_2.get_tree_hash().hex() == node_1_puzzle_hash.hex()
+
+    # Target 3 is created by node 2
+    assert puzzle_create_target_3.get_tree_hash().hex() == node_2_puzzle_hash.hex()
+
+    puzzle_create_node_1 = parent_puzzle_lookup.get(node_1_puzzle_hash.hex())
+    puzzle_create_node_2 = parent_puzzle_lookup.get(node_2_puzzle_hash.hex())
+
+    # Nodes 1 & 2 are created by root
+    assert puzzle_create_node_1.get_tree_hash().hex() == root_hash.hex()
+    assert puzzle_create_node_2.get_tree_hash().hex() == root_hash.hex()
