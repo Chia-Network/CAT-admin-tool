@@ -67,7 +67,7 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[Target]:
     return results
 
 
-def secure_the_bag(targets: List[Target], leaf_width: int, parent_puzzle_lookup: Dict[str, Program] = {}) -> bytes32:
+def secure_the_bag(targets: List[Target], leaf_width: int, parent_puzzle_lookup: Dict[str, Program] = {}) -> Tuple[bytes32, Dict[str, Program]]:
     """
     Calculates secure the bag root puzzle hash
     """
