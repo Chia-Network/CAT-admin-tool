@@ -11,6 +11,8 @@ dependencies = [
 
 dev_dependencies = [
     "black",
+    "pytest",
+    "pytest-env",
 ]
 
 setup(
