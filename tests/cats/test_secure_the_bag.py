@@ -379,6 +379,56 @@ def test_secure_bag_of_cats():
     # Puzzle reveal for root hash is correct
     assert root_puzzle.get_tree_hash().hex() == root_hash.hex()
 
+    node_1_puzzle = construct_cat_puzzle(
+        CAT_MOD,
+        asset_id,
+        Program.to(
+            (
+                1,
+                [
+                    [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                    [
+                        ConditionOpcode.CREATE_COIN,
+                        target_1_inner_puzzle_hash,
+                        target_1_amount,
+                        [target_1_inner_puzzle_hash]
+                    ],
+                    [
+                        ConditionOpcode.CREATE_COIN,
+                        target_2_inner_puzzle_hash,
+                        target_2_amount,
+                        [target_2_inner_puzzle_hash]
+                    ]
+                ]
+            )
+        )
+    )
+
+    # Puzzle reveal for node 1 is correct
+    assert node_1_puzzle.get_tree_hash().hex() == node_1_outer_puzzle_hash.hex()
+
+    node_2_puzzle = construct_cat_puzzle(
+        CAT_MOD,
+        asset_id,
+        Program.to(
+            (
+                1,
+                [
+                    [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                    [
+                        ConditionOpcode.CREATE_COIN,
+                        target_3_inner_puzzle_hash,
+                        target_3_amount,
+                        [target_3_inner_puzzle_hash]
+                    ]
+                ]
+            )
+        )
+    )
+
+    # Puzzle reveal for node 2 is correct
+    assert node_2_puzzle.get_tree_hash().hex() == node_2_outer_puzzle_hash.hex()
+
     # Parent puzzle lookup (used for puzzle reveals)
     puzzle_create_target_1 = parent_puzzle_lookup.get(target_1_outer_puzzle_hash.hex())
     puzzle_create_target_2 = parent_puzzle_lookup.get(target_2_outer_puzzle_hash.hex())
