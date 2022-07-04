@@ -6,11 +6,11 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chia-blockchain@git+https://github.com/Chia-Network/chia-blockchain.git@main#fa2cdd6492bcffbe61f50fde8b5e1d4fd2ac5a16",
+    "chia-blockchain==1.4.0",
 ]
 
 dev_dependencies = [
-    "black",
+    "black==21.12b0",
     "pytest",
     "pytest-env",
 ]
