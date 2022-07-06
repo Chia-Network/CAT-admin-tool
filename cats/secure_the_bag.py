@@ -25,45 +25,18 @@ class Target:
         return [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount, [self.puzzle_hash]]
 
 
-def batch_the_bag(targets: List[Target], leaf_width: int) -> List[Target]:
+def batch_the_bag(targets: List[Target], leaf_width: int) -> List[List[Target]]:
     """
-    Batches the bag making sure not to include multiple coins with the same
-    puzzle hash and amount in a batch
+    Batches the bag by leaf width.
     """
     results = []
-    batch_cache = {}
     current_batch = []
-    collisions = []
 
     for index, target in enumerate(targets):
-        remaining_collisions = []
-        for collision in collisions:
-            key = std_hash(collision.puzzle_hash + int_to_bytes(collision.amount))
-
-            if batch_cache.get(key):
-                remaining_collisions.append(collision)
-            else:
-                current_batch.append(collision)
-                batch_cache[key] = True
-            
-            if len(current_batch) == leaf_width:
-                results.append(current_batch)
-                batch_cache = {}
-                current_batch = []
-        
-        collisions = remaining_collisions
-
-        key = std_hash(target.puzzle_hash + int_to_bytes(target.amount))
-
-        if batch_cache.get(key):
-            collisions.append(target)
-        else:
-            current_batch.append(target)
-            batch_cache[key] = True
+        current_batch.append(target)
         
         if len(current_batch) == leaf_width or index == len(targets) - 1:
             results.append(current_batch)
-            batch_cache = {}
             current_batch = []
 
     return results
