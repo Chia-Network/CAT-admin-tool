@@ -68,18 +68,20 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
             list_of_conditions.append(target.create_coin_condition())
             total_amount += target.amount
 
-        inner_puzzle = Program.to((1, list_of_conditions))
-        outer_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, inner_puzzle)
-        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        puzzle = Program.to((1, list_of_conditions))
+        puzzle_hash = puzzle.get_tree_hash()
         amount = total_amount
 
-        results.append(Target(inner_puzzle_hash, amount))
+        results.append(Target(puzzle_hash, amount))
+
+        if asset_id is not None:
+            outer_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, puzzle)
 
         for target in batch_targets:
             if asset_id is not None:
                 target_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target.puzzle_hash).get_tree_hash(target.puzzle_hash)
                 parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = outer_puzzle
             else:
-                parent_puzzle_lookup[target.puzzle_hash.hex()] = inner_puzzle
+                parent_puzzle_lookup[target.puzzle_hash.hex()] = puzzle
 
     return secure_the_bag(results, leaf_width, asset_id, parent_puzzle_lookup)
