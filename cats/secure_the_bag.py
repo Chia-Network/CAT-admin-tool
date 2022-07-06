@@ -24,6 +24,17 @@ class Target:
     def create_coin_condition(self) -> Tuple[bytes, bytes32, uint64, Tuple[bytes32]]:
         return [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount, [self.puzzle_hash]]
 
+class Coin:
+    target: Target
+    puzzle: Program
+    puzzle_hash: bytes32
+    amount: uint64
+
+    def __init__(self, target: Target, puzzle: Program, amount: uint64) -> None:
+        self.target = target
+        self.puzzle = puzzle
+        self.puzzle_hash = puzzle.get_tree_hash()
+        self.amount = amount
 
 def batch_the_bag(targets: List[Target], leaf_width: int) -> List[List[Target]]:
     """
@@ -42,7 +53,7 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[List[Target]]:
     return results
 
 
-def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes32, None] = None, parent_puzzle_lookup: Dict = {}) -> Tuple[bytes32, Dict[str, Program]]:
+def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes32, None] = None, parent_puzzle_lookup: Dict[str, Coin] = {}) -> Tuple[bytes32, Dict[str, Coin]]:
     """
     Calculates secure the bag root puzzle hash and provides parent puzzle reveal lookup table for spending.
 
@@ -80,8 +91,16 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
         for target in batch_targets:
             if asset_id is not None:
                 target_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target.puzzle_hash).get_tree_hash(target.puzzle_hash)
-                parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = outer_puzzle
+                parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = Coin(target, outer_puzzle, amount)
             else:
-                parent_puzzle_lookup[target.puzzle_hash.hex()] = puzzle
+                parent_puzzle_lookup[target.puzzle_hash.hex()] = Coin(target, puzzle, amount)
 
     return secure_the_bag(results, leaf_width, asset_id, parent_puzzle_lookup)
+
+def parent_coin_name_for_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: bytes32, parent_puzzle_lookup: Dict[str, Coin]) -> bytes32:
+    parent: Union[Coin, None] = parent_puzzle_lookup.get(puzzle_hash.hex())
+
+    if parent is None:
+        return genesis_coin_name
+
+    return std_hash(parent_coin_name_for_puzzle_hash(genesis_coin_name, parent.puzzle_hash, parent_puzzle_lookup) + parent.puzzle_hash + int_to_bytes(parent.amount))

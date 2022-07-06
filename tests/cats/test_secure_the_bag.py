@@ -1,11 +1,13 @@
-from cats.secure_the_bag import batch_the_bag, secure_the_bag, Target
+from cats.secure_the_bag import batch_the_bag, parent_coin_name_for_puzzle_hash, secure_the_bag, Target
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from clvm.casts import int_to_bytes
 
 def test_batch_the_bag():
     targets = [
@@ -197,18 +199,18 @@ def test_secure_the_bag():
     puzzle_create_target_3 = parent_puzzle_lookup.get(target_3_puzzle_hash.hex())
 
     # Targets 1 & 2 are created by spending node 1
-    assert puzzle_create_target_1.get_tree_hash().hex() == node_1_puzzle_hash.hex()
-    assert puzzle_create_target_2.get_tree_hash().hex() == node_1_puzzle_hash.hex()
+    assert puzzle_create_target_1.puzzle.get_tree_hash().hex() == node_1_puzzle_hash.hex()
+    assert puzzle_create_target_2.puzzle.get_tree_hash().hex() == node_1_puzzle_hash.hex()
 
     # Target 3 is created by spending node 2
-    assert puzzle_create_target_3.get_tree_hash().hex() == node_2_puzzle_hash.hex()
+    assert puzzle_create_target_3.puzzle.get_tree_hash().hex() == node_2_puzzle_hash.hex()
 
     puzzle_create_node_1 = parent_puzzle_lookup.get(node_1_puzzle_hash.hex())
     puzzle_create_node_2 = parent_puzzle_lookup.get(node_2_puzzle_hash.hex())
 
     # Nodes 1 & 2 are created by spending root
-    assert puzzle_create_node_1.get_tree_hash().hex() == root_hash.hex()
-    assert puzzle_create_node_2.get_tree_hash().hex() == root_hash.hex()
+    assert puzzle_create_node_1.puzzle.get_tree_hash().hex() == root_hash.hex()
+    assert puzzle_create_node_2.puzzle.get_tree_hash().hex() == root_hash.hex()
 
 
 def test_secure_bag_of_cats():
@@ -331,15 +333,93 @@ def test_secure_bag_of_cats():
     puzzle_create_target_3 = parent_puzzle_lookup.get(target_3_outer_puzzle_hash.hex())
 
     # Targets 1 & 2 are created by spending node 1
-    assert puzzle_create_target_1.get_tree_hash().hex() == node_1_outer_puzzle_hash.hex()
-    assert puzzle_create_target_2.get_tree_hash().hex() == node_1_outer_puzzle_hash.hex()
+    assert puzzle_create_target_1.puzzle.get_tree_hash().hex() == node_1_outer_puzzle_hash.hex()
+    assert puzzle_create_target_2.puzzle.get_tree_hash().hex() == node_1_outer_puzzle_hash.hex()
 
     # Target 3 is created by spending node 2
-    assert puzzle_create_target_3.get_tree_hash().hex() == node_2_outer_puzzle_hash.hex()
+    assert puzzle_create_target_3.puzzle.get_tree_hash().hex() == node_2_outer_puzzle_hash.hex()
 
     puzzle_create_node_1 = parent_puzzle_lookup.get(node_1_outer_puzzle_hash.hex())
     puzzle_create_node_2 = parent_puzzle_lookup.get(node_2_outer_puzzle_hash.hex())
 
     # Nodes 1 & 2 are created by spending root
-    assert puzzle_create_node_1.get_tree_hash().hex() == root_hash.hex()
-    assert puzzle_create_node_2.get_tree_hash().hex() == root_hash.hex()
+    assert puzzle_create_node_1.puzzle.get_tree_hash().hex() == root_hash.hex()
+    assert puzzle_create_node_2.puzzle.get_tree_hash().hex() == root_hash.hex()
+
+def test_parent_coin_name_for_puzzle_hash():
+    target_1_puzzle_hash = bytes32.fromhex("4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba")
+    target_1_amount = uint64(10000000000000000)
+    target_2_puzzle_hash = bytes32.fromhex("f3d5162330c4d6c8b9a0aba5eed999178dd2bf466a7a0289739acc8209122e2c")
+    target_2_amount = uint64(32100000000)
+    target_3_puzzle_hash = bytes32.fromhex("7ffdeca4f997bde55d249b4a3adb8077782bc4134109698e95b10ea306a138b4")
+    target_3_amount = uint64(10000000000000000)
+
+    targets = [
+        Target(
+            target_1_puzzle_hash,
+            target_1_amount
+        ),
+        Target(
+            target_2_puzzle_hash,
+            target_2_amount
+        ),
+        Target(
+            target_3_puzzle_hash,
+            target_3_amount
+        )
+    ]
+    _, parent_puzzle_lookup = secure_the_bag(targets, 2)
+
+    genesis_coin_name = bytes32.fromhex("2676b64fab1f562cc4788cb2a9dbbe31da09da9cc23118dfccf6ad741d652328")
+    expected_node_1_coin_name = bytes32.fromhex("983630b55fbb71bd86b33ecb9f6a091f672b9549c39206938b87e5844a4f24ea")
+    expected_root_coin_name = bytes32.fromhex("c3618d8833e0c9e24a4cee44a31617182fce240dc95fd1064fb0ba7eda7080a2")
+
+    coin_name = parent_coin_name_for_puzzle_hash(genesis_coin_name, target_1_puzzle_hash, parent_puzzle_lookup)
+
+    # Coin name of node 1
+    assert coin_name == expected_node_1_coin_name
+
+    node_1_puzzle_hash = parent_puzzle_lookup.get(target_1_puzzle_hash.hex()).puzzle_hash
+
+    coin_name = parent_coin_name_for_puzzle_hash(genesis_coin_name, node_1_puzzle_hash, parent_puzzle_lookup)
+
+    # Coin name of root
+    assert coin_name == expected_root_coin_name
+
+    root_puzzle_hash = parent_puzzle_lookup.get(node_1_puzzle_hash.hex()).puzzle_hash
+
+    coin_name = parent_coin_name_for_puzzle_hash(genesis_coin_name, root_puzzle_hash, parent_puzzle_lookup)
+
+    # Coin name of genesis
+    assert coin_name == genesis_coin_name
+
+    # Confirm expected root coin name is correct
+    root_coin_name = std_hash(genesis_coin_name + root_puzzle_hash + int_to_bytes(target_1_amount + target_2_amount + target_3_amount))
+
+    assert root_coin_name == expected_root_coin_name
+
+    node_1_puzzle = Program.to(
+        (
+            1,
+            [
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [
+                    ConditionOpcode.CREATE_COIN,
+                    target_1_puzzle_hash,
+                    target_1_amount,
+                    [target_1_puzzle_hash]
+                ],
+                [
+                    ConditionOpcode.CREATE_COIN,
+                    target_2_puzzle_hash,
+                    target_2_amount,
+                    [target_2_puzzle_hash]
+                ]
+            ]
+        )
+    )
+
+    # Confirm expected node 1 coin name is correct
+    node_1_coin_name = std_hash(root_coin_name + node_1_puzzle.get_tree_hash() + int_to_bytes(target_1_amount + target_2_amount))
+
+    assert node_1_coin_name == expected_node_1_coin_name
