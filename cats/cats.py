@@ -24,8 +24,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.util.bech32m import decode_puzzle_hash
-from cats.secure_the_bag import read_secure_the_bag_targets, secure_the_bag
-from cats.unwind_the_bag import cli
+from chia.util.hash import std_hash
+from secure_the_bag import read_secure_the_bag_targets, secure_the_bag
+
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 async def get_client() -> Optional[WalletRpcClient]:
@@ -196,7 +197,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     "--secure-the-bag-targets-path",
     help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
 )
-def cats(
+def cli(
     ctx: click.Context,
     tail: str,
     curry: Tuple[str],
@@ -219,13 +220,6 @@ def cats(
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
 
-    if secure_the_bag_targets_path:
-        targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
-        root_puzzle_hash, _ = secure_the_bag(targets, 100, tail.get_tree_hash())
-        address = root_puzzle_hash
-    else:
-        address = decode_puzzle_hash(send_to)
-
     aggregated_signature = G2Element()
     for sig in signature:
         aggregated_signature = AugSchemeMPL.aggregate(
@@ -243,6 +237,15 @@ def cats(
         curried_tail = tail.curry(*curried_args)
     else:
         curried_tail = tail
+    
+    if secure_the_bag_targets_path:
+        targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
+        root_puzzle_hash, _ = secure_the_bag(targets, 100, None)
+        print("CREATED WITH INNER ROOT PUZZLEHASH ", root_puzzle_hash)
+        print("EXPECTED OUTER ROOT PUZZLEHASH IS ", construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash))
+        address = root_puzzle_hash
+    else:
+        address = decode_puzzle_hash(send_to)
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(

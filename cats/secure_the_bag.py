@@ -62,9 +62,6 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
     """
 
     if len(targets) == 1:
-        if asset_id is not None:
-            return construct_cat_puzzle(CAT_MOD, asset_id, targets[0].puzzle_hash).get_tree_hash(targets[0].puzzle_hash), parent_puzzle_lookup
-
         return targets[0].puzzle_hash, parent_puzzle_lookup
 
     results: List[Target] = []
@@ -98,15 +95,18 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
 
     return secure_the_bag(results, leaf_width, asset_id, parent_puzzle_lookup)
 
-def parent_of_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: bytes32, parent_puzzle_lookup: Dict[str, Coin]) -> Tuple[bytes32, bytes32]:
+def parent_of_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: bytes32, asset_id: bytes32, parent_puzzle_lookup: Dict[str, Coin]) -> Tuple[bytes32, bytes32]:
     parent: Union[Coin, None] = parent_puzzle_lookup.get(puzzle_hash.hex())
 
     if parent is None:
         return genesis_coin_name, None
 
-    parent_coin_info, _ = parent_of_puzzle_hash(genesis_coin_name, parent.puzzle_hash, parent_puzzle_lookup)
+    # We need the parent of the parent in order to calculate the coin name
+    parent_coin_info, _ = parent_of_puzzle_hash(genesis_coin_name, parent.puzzle_hash, asset_id, parent_puzzle_lookup)
 
-    return std_hash(parent_coin_info + parent.puzzle_hash + int_to_bytes(parent.amount)), parent.puzzle_hash
+    puzzle_hash = parent.puzzle_hash
+
+    return std_hash(parent_coin_info + puzzle_hash + int_to_bytes(parent.amount)), puzzle_hash
 
 def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount: Union[int, None]) -> List[Target]:
     """
