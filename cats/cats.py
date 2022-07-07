@@ -192,8 +192,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 )
 @click.option(
     "-stb",
-    "--secure-the-bag",
-    required=False,
+    "--secure-the-bag-targets-path",
     help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
 )
 def cli(
@@ -211,7 +210,7 @@ def cli(
     select_coin: bool,
     quiet: bool,
     push: bool,
-    secure_the_bag_file_path: bool
+    secure_the_bag_targets_path: bool
 ):
     ctx.ensure_object(dict)
 
@@ -219,8 +218,8 @@ def cli(
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
 
-    if secure_the_bag_file_path:
-        targets = read_secure_the_bag_targets(secure_the_bag)
+    if secure_the_bag_targets_path:
+        targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
         root_puzzle_hash, _ = secure_the_bag(targets, 100, tail.get_tree_hash())
         address = root_puzzle_hash
     else:
