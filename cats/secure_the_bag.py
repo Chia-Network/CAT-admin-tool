@@ -1,3 +1,4 @@
+import csv
 from typing import Dict, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program
@@ -104,3 +105,21 @@ def parent_coin_name_for_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: by
         return genesis_coin_name
 
     return std_hash(parent_coin_name_for_puzzle_hash(genesis_coin_name, parent.puzzle_hash, parent_puzzle_lookup) + parent.puzzle_hash + int_to_bytes(parent.amount))
+
+def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount: int) -> List[Target]:
+    """
+    Reads secure the bag targets file. Validates the net amount sent to targets is equal to the target amount.
+    """
+    targets: List[Target] = []
+
+    with open(secure_the_bag_targets_path, newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        for [ph, amount] in list(reader):
+            targets.append(Target(bytes32.fromhex(ph), uint64(amount)))
+
+    net_amount = sum([target.amount for target in targets])
+
+    if net_amount != target_amount:
+        raise Exception("Net amount of targets not expected amount. Expected {} but got {}".format(target_amount, net_amount))
+
+    return targets

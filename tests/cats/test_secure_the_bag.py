@@ -1,4 +1,6 @@
-from cats.secure_the_bag import batch_the_bag, parent_coin_name_for_puzzle_hash, secure_the_bag, Target
+import pytest
+
+from cats.secure_the_bag import batch_the_bag, parent_coin_name_for_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, Target
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -423,3 +425,21 @@ def test_parent_coin_name_for_puzzle_hash():
     node_1_coin_name = std_hash(root_coin_name + node_1_puzzle.get_tree_hash() + int_to_bytes(target_1_amount + target_2_amount))
 
     assert node_1_coin_name == expected_node_1_coin_name
+
+def test_read_secure_the_bag_targets():
+    targets = read_secure_the_bag_targets("./tests/cats/test.csv")
+
+    assert len(targets) == 3
+
+    assert targets[0].puzzle_hash == bytes32.fromhex("4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba")
+    assert targets[0].amount == uint64(10000000000000000)
+
+    assert targets[1].puzzle_hash == bytes32.fromhex("f3d5162330c4d6c8b9a0aba5eed999178dd2bf466a7a0289739acc8209122e2c")
+    assert targets[1].amount == uint64(32100000000)
+
+    assert targets[2].puzzle_hash == bytes32.fromhex("7ffdeca4f997bde55d249b4a3adb8077782bc4134109698e95b10ea306a138b4")
+    assert targets[2].amount == uint64(10000000000000000)
+
+def test_read_secure_the_bag_targets_invalid_net_amount():
+    with pytest.raises(Exception):
+        read_secure_the_bag_targets("test.csv", 5000000)

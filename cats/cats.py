@@ -24,6 +24,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.util.bech32m import decode_puzzle_hash
+from cats.secure_the_bag import read_secure_the_bag_targets, secure_the_bag
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 async def get_client() -> Optional[WalletRpcClient]:
@@ -189,6 +190,12 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     is_flag=True,
     help="Automatically push transaction to the network in quiet mode",
 )
+@click.option(
+    "-stb",
+    "--secure-the-bag",
+    required=False,
+    help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
+)
 def cli(
     ctx: click.Context,
     tail: str,
@@ -203,14 +210,21 @@ def cli(
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
-    push: bool
+    push: bool,
+    secure_the_bag_file_path: bool
 ):
     ctx.ensure_object(dict)
 
     tail = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
-    address = decode_puzzle_hash(send_to)
+
+    if secure_the_bag_file_path:
+        targets = read_secure_the_bag_targets(secure_the_bag)
+        root_puzzle_hash, _ = secure_the_bag(targets, 100, tail.get_tree_hash())
+        address = root_puzzle_hash
+    else:
+        address = decode_puzzle_hash(send_to)
 
     aggregated_signature = G2Element()
     for sig in signature:
