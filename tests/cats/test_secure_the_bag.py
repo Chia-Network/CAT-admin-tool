@@ -1,6 +1,6 @@
 import pytest
 
-from cats.secure_the_bag import batch_the_bag, parent_coin_name_for_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, Target
+from cats.secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, Target
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -348,7 +348,7 @@ def test_secure_bag_of_cats():
     assert puzzle_create_node_1.puzzle.get_tree_hash().hex() == root_hash.hex()
     assert puzzle_create_node_2.puzzle.get_tree_hash().hex() == root_hash.hex()
 
-def test_parent_coin_name_for_puzzle_hash():
+def test_parent_of_puzzle_hash():
     target_1_puzzle_hash = bytes32.fromhex("4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba")
     target_1_amount = uint64(10000000000000000)
     target_2_puzzle_hash = bytes32.fromhex("f3d5162330c4d6c8b9a0aba5eed999178dd2bf466a7a0289739acc8209122e2c")
@@ -376,24 +376,27 @@ def test_parent_coin_name_for_puzzle_hash():
     expected_node_1_coin_name = bytes32.fromhex("983630b55fbb71bd86b33ecb9f6a091f672b9549c39206938b87e5844a4f24ea")
     expected_root_coin_name = bytes32.fromhex("c3618d8833e0c9e24a4cee44a31617182fce240dc95fd1064fb0ba7eda7080a2")
 
-    coin_name = parent_coin_name_for_puzzle_hash(genesis_coin_name, target_1_puzzle_hash, parent_puzzle_lookup)
+    coin_name, puzzle_hash = parent_of_puzzle_hash(genesis_coin_name, target_1_puzzle_hash, parent_puzzle_lookup)
 
     # Coin name of node 1
     assert coin_name == expected_node_1_coin_name
+    assert puzzle_hash == bytes32.fromhex("59e9003d6199915750187188a631187d0bb78b32a1ae04155615cae267975b4b")
 
     node_1_puzzle_hash = parent_puzzle_lookup.get(target_1_puzzle_hash.hex()).puzzle_hash
 
-    coin_name = parent_coin_name_for_puzzle_hash(genesis_coin_name, node_1_puzzle_hash, parent_puzzle_lookup)
+    coin_name, puzzle_hash = parent_of_puzzle_hash(genesis_coin_name, node_1_puzzle_hash, parent_puzzle_lookup)
 
     # Coin name of root
     assert coin_name == expected_root_coin_name
+    assert puzzle_hash == bytes32.fromhex("bbffed16fdfe5b4c79fced8d04d913a68ea4a028e843e4fb09df18d432713810")
 
     root_puzzle_hash = parent_puzzle_lookup.get(node_1_puzzle_hash.hex()).puzzle_hash
 
-    coin_name = parent_coin_name_for_puzzle_hash(genesis_coin_name, root_puzzle_hash, parent_puzzle_lookup)
+    coin_name, puzzle_hash = parent_of_puzzle_hash(genesis_coin_name, root_puzzle_hash, parent_puzzle_lookup)
 
     # Coin name of genesis
     assert coin_name == genesis_coin_name
+    assert puzzle_hash == None
 
     # Confirm expected root coin name is correct
     root_coin_name = std_hash(genesis_coin_name + root_puzzle_hash + int_to_bytes(target_1_amount + target_2_amount + target_3_amount))

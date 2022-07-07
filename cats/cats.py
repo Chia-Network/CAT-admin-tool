@@ -25,6 +25,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.util.bech32m import decode_puzzle_hash
 from cats.secure_the_bag import read_secure_the_bag_targets, secure_the_bag
+from cats.unwind_the_bag import cli
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 async def get_client() -> Optional[WalletRpcClient]:
@@ -191,11 +192,11 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="Automatically push transaction to the network in quiet mode",
 )
 @click.option(
-    "-stb",
+    "-stbtp",
     "--secure-the-bag-targets-path",
     help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
 )
-def cli(
+def cats(
     ctx: click.Context,
     tail: str,
     curry: Tuple[str],
@@ -210,7 +211,7 @@ def cli(
     select_coin: bool,
     quiet: bool,
     push: bool,
-    secure_the_bag_targets_path: bool
+    secure_the_bag_targets_path: str
 ):
     ctx.ensure_object(dict)
 
@@ -260,14 +261,20 @@ def cli(
         filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
     )[0]
 
+    primary_coin = list(
+        filter(
+            lambda c: c.name() == eve_coin.parent_coin_info,
+            signed_tx.spend_bundle.removals(),
+        )
+    )[0]
+
+    if secure_the_bag_targets_path:
+        secure_the_bag_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), address).get_tree_hash(address)
+        print(f"Secure the bag root puzzle hash {secure_the_bag_outer_puzzle_hash}")
+
     # This is where we exit if we're only looking for the selected coin
     if select_coin:
-        primary_coin = list(
-            filter(
-                lambda c: c.name() == eve_coin.parent_coin_info,
-                signed_tx.spend_bundle.removals(),
-            )
-        )[0]
+        
         print(json.dumps(primary_coin.to_json_dict(), sort_keys=True, indent=4))
         print(f"Name: {primary_coin.name().hex()}")
         return
