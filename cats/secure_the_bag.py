@@ -104,7 +104,9 @@ def parent_of_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: bytes32, asse
     # We need the parent of the parent in order to calculate the coin name
     _, parent_coin_info = parent_of_puzzle_hash(genesis_coin_name, parent.puzzle_hash, asset_id, parent_puzzle_lookup)
 
-    return CoinSpend(Coin(parent_coin_info, parent.puzzle_hash, parent.amount), parent.puzzle, Program.to([])), parent_coin_info
+    coin = Coin(parent_coin_info, parent.puzzle_hash, parent.amount)
+
+    return CoinSpend(coin, parent.puzzle, Program.to([])), coin.name()
 
 def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount: Union[int, None]) -> List[Target]:
     """
