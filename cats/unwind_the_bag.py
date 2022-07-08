@@ -143,11 +143,12 @@ def cli(
             tail_hash_bytes,
             inner_puzzle,
             Program.to([]),
-            lineage_proof=LineageProof(coin_spend.coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent.coin.amount)
+            lineage_proof=LineageProof(parent_r.coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent.coin.amount)
         )
         cat_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
 
-        r = coin_spend.puzzle_reveal.run_with_cost(0, coin_spend.solution)
+        # Running here to throw an error before pushing to full node if the spend is invalid
+        r = cat_spend.coin_spends[0].puzzle_reveal.run_with_cost(0, cat_spend.coin_spends[0].solution)
 
         wallet_client_f, _ = asyncio.get_event_loop().run_until_complete(
             get_wallet(wallet_client, None)
