@@ -1,8 +1,10 @@
 import csv
 from typing import Dict, List, Tuple, Union
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -25,7 +27,7 @@ class Target:
     def create_coin_condition(self) -> Tuple[bytes, bytes32, uint64, Tuple[bytes32]]:
         return [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount, [self.puzzle_hash]]
 
-class Coin:
+class TargetCoin:
     target: Target
     puzzle: Program
     puzzle_hash: bytes32
@@ -54,7 +56,7 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[List[Target]]:
     return results
 
 
-def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes32, None] = None, parent_puzzle_lookup: Dict[str, Coin] = {}) -> Tuple[bytes32, Dict[str, Coin]]:
+def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes32, None] = None, parent_puzzle_lookup: Dict[str, TargetCoin] = {}) -> Tuple[bytes32, Dict[str, TargetCoin]]:
     """
     Calculates secure the bag root puzzle hash and provides parent puzzle reveal lookup table for spending.
 
@@ -89,24 +91,22 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
         for target in batch_targets:
             if asset_id is not None:
                 target_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target.puzzle_hash).get_tree_hash(target.puzzle_hash)
-                parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = Coin(target, outer_puzzle, amount)
+                parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = TargetCoin(target, outer_puzzle, amount)
             else:
-                parent_puzzle_lookup[target.puzzle_hash.hex()] = Coin(target, puzzle, amount)
+                parent_puzzle_lookup[target.puzzle_hash.hex()] = TargetCoin(target, puzzle, amount)
 
     return secure_the_bag(results, leaf_width, asset_id, parent_puzzle_lookup)
 
-def parent_of_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: bytes32, asset_id: bytes32, parent_puzzle_lookup: Dict[str, Coin]) -> Tuple[bytes32, bytes32]:
-    parent: Union[Coin, None] = parent_puzzle_lookup.get(puzzle_hash.hex())
+def parent_of_puzzle_hash(genesis_coin_name: bytes32, puzzle_hash: bytes32, asset_id: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin]) -> Tuple[Union[CoinSpend, None], bytes32]:
+    parent: Union[TargetCoin, None] = parent_puzzle_lookup.get(puzzle_hash.hex())
 
     if parent is None:
-        return genesis_coin_name, None
+        return None, genesis_coin_name
 
     # We need the parent of the parent in order to calculate the coin name
-    parent_coin_info, _ = parent_of_puzzle_hash(genesis_coin_name, parent.puzzle_hash, asset_id, parent_puzzle_lookup)
+    _, parent_coin_info = parent_of_puzzle_hash(genesis_coin_name, parent.puzzle_hash, asset_id, parent_puzzle_lookup)
 
-    puzzle_hash = parent.puzzle_hash
-
-    return std_hash(parent_coin_info + puzzle_hash + int_to_bytes(parent.amount)), puzzle_hash
+    return CoinSpend(Coin(parent_coin_info, parent.puzzle_hash, parent.amount), parent.puzzle, Program.to([])), parent_coin_info
 
 def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount: Union[int, None]) -> List[Target]:
     """
