@@ -6,11 +6,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
-from clvm.casts import int_to_bytes
 
 # Fees spend asserts this. Message not required as inner puzzle contains hardcoded coin spends and doesn't accept a solution.
 EMPTY_COIN_ANNOUNCEMENT = [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None]

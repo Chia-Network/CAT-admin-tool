@@ -11,9 +11,17 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.config import load_config
-from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import (
+    construct_cat_puzzle,
+    CAT_MOD,
+    SpendableCAT,
+    match_cat_puzzle,
+    unsigned_spend_bundle_for_spendable_cats,
+)
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 from secure_the_bag import parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag
@@ -108,16 +116,44 @@ def cli(
     print(f"{len(required_coin_spends)} spends required to unwind the bag")
 
     for coin_spend in required_coin_spends[::-1]:
-        print(f"Spending coin {coin_spend.coin.name()}")
+        matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal)
 
-        # No signature required as anybody can unwind the bag
-        spend_bundle = SpendBundle([coin_spend], NULL_SIGNATURE)
+        if matched is None:
+            raise Exception("Expected CAT")
+
+        _, _, inner_puzzle = curried_args
+
+        # Get parent coin info as required for lineage proof when spending this CAT coin
+        parent_r: CoinRecord = asyncio.get_event_loop().run_until_complete(
+            full_node_client.get_coin_record_by_name(coin_spend.coin.parent_coin_info)
+        )
+        parent: CoinSpend = asyncio.get_event_loop().run_until_complete(
+            full_node_client.get_puzzle_and_solution(coin_spend.coin.parent_coin_info, parent_r.spent_block_index)
+        )
+
+        parent_matched, parent_curried_args = match_cat_puzzle(parent.puzzle_reveal)
+
+        if parent_matched is None:
+            raise Exception("Expected parent to be CAT")
+
+        _, _, parent_inner_puzzle = parent_curried_args
+
+        spendable_cat = SpendableCAT(
+            coin_spend.coin,
+            tail_hash_bytes,
+            inner_puzzle,
+            Program.to([]),
+            lineage_proof=LineageProof(coin_spend.coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent.coin.amount)
+        )
+        cat_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
+
+        r = coin_spend.puzzle_reveal.run_with_cost(0, coin_spend.solution)
 
         wallet_client_f, _ = asyncio.get_event_loop().run_until_complete(
             get_wallet(wallet_client, None)
         )
         response = asyncio.get_event_loop().run_until_complete(
-            wallet_client_f.push_tx(spend_bundle)
+            wallet_client_f.push_tx(cat_spend)
         )
 
         print("fin", response)
