@@ -293,6 +293,8 @@ def cli(
     )
     eve_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_eve])
 
+    print(">>>>>>>>>>> Genesis coin ID for unwind is ", eve_coin.name())
+
     # Aggregate everything together
     final_bundle = SpendBundle.aggregate(
         [

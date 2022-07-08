@@ -115,6 +115,8 @@ def cli(
 
     print(f"{len(required_coin_spends)} spends required to unwind the bag")
 
+    print("required_coin_spends[::-1] ", required_coin_spends[::-1])
+
     for coin_spend in required_coin_spends[::-1]:
         matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal)
 
