@@ -24,7 +24,6 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.hash import std_hash
 from secure_the_bag import read_secure_the_bag_targets, secure_the_bag
 
 

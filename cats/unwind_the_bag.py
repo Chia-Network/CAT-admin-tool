@@ -2,17 +2,17 @@ import asyncio
 from blspy import G2Element
 import click
 import os
+import time
 from typing import List
 from pathlib import Path
 
 from chia.cmds.wallet_funcs import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import CoinSpend, SpendBundle
+from chia.types.spend_bundle import CoinSpend
 from chia.util.config import load_config
 from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
@@ -27,6 +27,27 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from secure_the_bag import parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag
 
 NULL_SIGNATURE = G2Element()
+
+async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: bytes32):
+    """
+    Repeatedly poll full node until coin is spent.
+
+    This is used to wait for coins spend before spending children.
+    """
+    while True:
+        time.sleep(5)
+
+        coin_record = await full_node_client.get_coin_record_by_name(coin_name)
+
+        if coin_record is None:
+            print("Coin {} does not exist".format(coin_name))
+            continue
+
+        if coin_record.spent_block_index > 0:
+            print("Coin {} has been spent".format(coin_name))
+            break
+
+        print("Coin {} has not been spent".format(coin_name))
 
 
 @click.command()
@@ -108,8 +129,8 @@ def cli(
             # We have reached the lowest unspent coin
             required_coin_spends.append(coin_spend)
         else:
-            # This situation is only expected if somebody else unwraps the bag at the same time
-            print("WARNING: Lowest coin is spent. Somebody else might have unwrapped the bag.")
+            # This situation is only expected if the bag has already been unwound (possibly by somebody else)
+            print("WARNING: Lowest coin is spent. Secured bag already unwound.")
 
         break
 
@@ -147,8 +168,8 @@ def cli(
         )
         cat_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
 
-        # Running here to throw an error before pushing to full node if the spend is invalid
-        r = cat_spend.coin_spends[0].puzzle_reveal.run_with_cost(0, cat_spend.coin_spends[0].solution)
+        # Throw an error before pushing to full node if spend is invalid
+        _ = cat_spend.coin_spends[0].puzzle_reveal.run_with_cost(0, cat_spend.coin_spends[0].solution)
 
         wallet_client_f, _ = asyncio.get_event_loop().run_until_complete(
             get_wallet(wallet_client, None)
@@ -157,7 +178,15 @@ def cli(
             wallet_client_f.push_tx(cat_spend)
         )
 
-        print("fin", response)
+        print("Transaction pushed to full node", response)
+
+        # Wait for parent coin to be spent before attempting to spend children
+        asyncio.get_event_loop().run_until_complete(
+            wait_for_coin_spend(full_node_client, coin_spend.coin.name())
+        )
+
+    full_node_client.close()
+    wallet_client.close()
         
 
 def main():
