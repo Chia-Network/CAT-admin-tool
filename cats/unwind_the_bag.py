@@ -87,10 +87,10 @@ def cli(
         else:
             # This situation is only expected if somebody else unwraps the bag at the same time
             print("WARNING: Lowest coin is spent. Somebody else might have unwrapped the bag.")
-            # Trying this..
-            required_coin_spends.append(parent_coin_name)
 
         break
+
+    print(f"{len(required_coin_spends)} spends required to unwind the bag")
 
     print("required_coin_spends", required_coin_spends)
 
