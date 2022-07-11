@@ -53,16 +53,18 @@ async def wait_for_unspent_coin(full_node_client: FullNodeRpcClient, coin_name: 
     Raises an exception if coin has already been spent.
     """
     while True:
-        time.sleep(5)
+        print(f"Waiting for unspent coin {coin_name}")
+
+        time.sleep(2)
 
         exists = await unspent_coin_exists(full_node_client, coin_name)
 
         if exists:
-            print("Coin {} exists and is unspent".format(coin_name))
+            print(f"Coin {coin_name} exists and is unspent")
 
             break
 
-        print("Unspent coin {} does not exist".format(coin_name))
+        print(f"Unspent coin {coin_name} does not exist")
 
 
 async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: bytes32):
@@ -72,21 +74,23 @@ async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: by
     This is used to wait for coins spend before spending children.
     """
     while True:
-        time.sleep(5)
+        print(f"Waiting for coin spend {coin_name}")
+
+        time.sleep(2)
 
         coin_record = await full_node_client.get_coin_record_by_name(coin_name)
 
         if coin_record is None:
-            print("Coin {} does not exist".format(coin_name))
+            print(f"Coin {coin_name} does not exist")
 
             continue
 
         if coin_record.spent_block_index > 0:
-            print("Coin {} has been spent".format(coin_name))
+            print(f"Coin {coin_name} has been spent")
 
             break
 
-        print("Coin {} has not been spent".format(coin_name))
+        print(f"Coin {coin_name} has not been spent")
 
 
 async def get_unwind(full_node_client: FullNodeRpcClient, genesis_coin_id: bytes32, tail_hash_bytes: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin], target_puzzle_hash: bytes32) -> List[CoinSpend]:
@@ -168,6 +172,9 @@ async def unwind_coin_spend(full_node_client: FullNodeRpcClient, wallet_client: 
 
 async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: WalletRpcClient, unwind_target_puzzle_hash_bytes: bytes32, tail_hash_bytes: bytes32, genesis_coin_id: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin]):
     current_puzzle_hash = construct_cat_puzzle(CAT_MOD, tail_hash_bytes, unwind_target_puzzle_hash_bytes).get_tree_hash(unwind_target_puzzle_hash_bytes)
+
+    print(f"Getting unwind for {current_puzzle_hash}")
+
     required_coin_spends: List[CoinSpend] = await get_unwind(full_node_client, genesis_coin_id, tail_hash_bytes, parent_puzzle_lookup, current_puzzle_hash)
 
     print(f"{len(required_coin_spends)} spends required to unwind the bag to {unwind_target_puzzle_hash_bytes}")
