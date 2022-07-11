@@ -28,6 +28,43 @@ from secure_the_bag import parent_of_puzzle_hash, read_secure_the_bag_targets, s
 
 NULL_SIGNATURE = G2Element()
 
+
+async def unspent_coin_exists(full_node_client: FullNodeRpcClient, coin_name: bytes32):
+    """
+    Checks if an unspent coin exists.
+
+    Raises an exception if coin has already been spent.
+    """
+    coin_record = await full_node_client.get_coin_record_by_name(coin_name)
+
+    if coin_record is None:
+        return False
+
+    if coin_record.spent_block_index > 0:
+        raise Exception("Coin {} has already been spent".format(coin_name))
+
+    return True
+
+
+async def wait_for_unspent_coin(full_node_client: FullNodeRpcClient, coin_name: bytes32):
+    """
+    Repeatedly poll full node until unspent coin is created.
+
+    Raises an exception if coin has already been spent.
+    """
+    while True:
+        time.sleep(5)
+
+        exists = await unspent_coin_exists(full_node_client, coin_name)
+
+        if exists:
+            print("Coin {} exists and is unspent".format(coin_name))
+
+            break
+
+        print("Unspent coin {} does not exist".format(coin_name))
+
+
 async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: bytes32):
     """
     Repeatedly poll full node until coin is spent.
@@ -41,10 +78,12 @@ async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: by
 
         if coin_record is None:
             print("Coin {} does not exist".format(coin_name))
+
             continue
 
         if coin_record.spent_block_index > 0:
             print("Coin {} has been spent".format(coin_name))
+
             break
 
         print("Coin {} has not been spent".format(coin_name))
@@ -137,6 +176,11 @@ def cli(
     print(f"{len(required_coin_spends)} spends required to unwind the bag")
 
     for coin_spend in required_coin_spends[::-1]:
+        # Wait for unspent coin to exist before trying to spend it
+        asyncio.get_event_loop().run_until_complete(
+            wait_for_unspent_coin(full_node_client, coin_spend.coin.name())
+        )
+
         matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal)
 
         if matched is None:
