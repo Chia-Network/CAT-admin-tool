@@ -215,6 +215,7 @@ def cli(
 ):
     ctx.ensure_object(dict)
 
+    leaf_width = 100
     tail = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
@@ -239,7 +240,7 @@ def cli(
     
     if secure_the_bag_targets_path:
         targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
-        root_puzzle_hash, _ = secure_the_bag(targets, 100, None)
+        root_puzzle_hash, _ = secure_the_bag(targets, leaf_width, None)
         print("CREATED WITH INNER ROOT PUZZLEHASH ", root_puzzle_hash)
         print("EXPECTED OUTER ROOT PUZZLEHASH IS ", construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash))
         address = root_puzzle_hash
