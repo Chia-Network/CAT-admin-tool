@@ -55,8 +55,6 @@ async def wait_for_unspent_coin(full_node_client: FullNodeRpcClient, coin_name: 
     while True:
         print(f"Waiting for unspent coin {coin_name}")
 
-        time.sleep(2)
-
         exists = await unspent_coin_exists(full_node_client, coin_name)
 
         if exists:
@@ -75,8 +73,6 @@ async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: by
     """
     while True:
         print(f"Waiting for coin spend {coin_name}")
-
-        time.sleep(2)
 
         coin_record = await full_node_client.get_coin_record_by_name(coin_name)
 
