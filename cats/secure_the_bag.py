@@ -67,11 +67,19 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
     results: List[Target] = []
 
     batched_targets = batch_the_bag(targets, leaf_width)
+    batch_count = len(batched_targets)
+
+    print(f"Batched the bag into {batch_count} batches")
+
+    processed = 0
 
     for batch_targets in batched_targets:
+        print(f"{(processed / batch_count) * 100}% of the way through batches")
 
         list_of_conditions = [EMPTY_COIN_ANNOUNCEMENT]
         total_amount = 0
+
+        print(f"Creating coin with {len(batch_targets)} targets")
 
         for target in batch_targets:
             list_of_conditions.append(target.create_coin_condition())
@@ -92,6 +100,8 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
                 parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = TargetCoin(target, outer_puzzle, amount)
             else:
                 parent_puzzle_lookup[target.puzzle_hash.hex()] = TargetCoin(target, puzzle, amount)
+
+        processed += 1
 
     return secure_the_bag(results, leaf_width, asset_id, parent_puzzle_lookup)
 
