@@ -1,9 +1,10 @@
 import asyncio
+from collections import defaultdict
 from blspy import G2Element
 import click
 import os
 import time
-from typing import Dict, List
+from typing import Coroutine, Dict, List
 from pathlib import Path
 
 from chia.cmds.wallet_funcs import get_wallet
@@ -12,7 +13,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import CoinSpend
+from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.config import load_config
 from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
@@ -64,6 +65,8 @@ async def wait_for_unspent_coin(full_node_client: FullNodeRpcClient, coin_name: 
 
         print(f"Unspent coin {coin_name} does not exist")
 
+        await asyncio.sleep(3)
+
 
 async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: bytes32):
     """
@@ -87,6 +90,8 @@ async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: by
             break
 
         print(f"Coin {coin_name} has not been spent")
+
+        await asyncio.sleep(3)
 
 
 async def get_unwind(full_node_client: FullNodeRpcClient, genesis_coin_id: bytes32, tail_hash_bytes: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin], target_puzzle_hash: bytes32) -> List[CoinSpend]:
@@ -123,7 +128,7 @@ async def get_unwind(full_node_client: FullNodeRpcClient, genesis_coin_id: bytes
     return required_coin_spends
 
 
-async def unwind_coin_spend(full_node_client: FullNodeRpcClient, wallet_client: WalletRpcClient, tail_hash_bytes: bytes32, coin_spend: CoinSpend):
+async def unwind_coin_spend(full_node_client: FullNodeRpcClient, tail_hash_bytes: bytes32, coin_spend: CoinSpend) -> SpendBundle:
     # Wait for unspent coin to exist before trying to spend it
     await wait_for_unspent_coin(full_node_client, coin_spend.coin.name())
 
@@ -157,16 +162,21 @@ async def unwind_coin_spend(full_node_client: FullNodeRpcClient, wallet_client: 
     # Throw an error before pushing to full node if spend is invalid
     _ = cat_spend.coin_spends[0].puzzle_reveal.run_with_cost(0, cat_spend.coin_spends[0].solution)
 
-    wallet_client_f, _ = await get_wallet(wallet_client, None)
-    response = await wallet_client_f.push_tx(cat_spend)
+    return cat_spend
 
-    print("Transaction pushed to full node", response)
+def combine_spend_bundles_with_fee(batch: List[SpendBundle], unwind_fee: int):
+    coin_spends: List[CoinSpend] = []
 
-    # Wait for parent coin to be spent before attempting to spend children
-    await wait_for_coin_spend(full_node_client, coin_spend.coin.name())
+    for spend_bundle in batch:
+        coin_spends += spend_bundle.coin_spends
+    
+    # if unwind_fee > 0:
+    #     # todo: add fee to spend bundle here...
+    #     foo = "bar"
+    
+    return SpendBundle(coin_spends, NULL_SIGNATURE)
 
-
-async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: WalletRpcClient, unwind_target_puzzle_hash_bytes: bytes32, tail_hash_bytes: bytes32, genesis_coin_id: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin]):
+async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: WalletRpcClient, unwind_target_puzzle_hash_bytes: bytes32, tail_hash_bytes: bytes32, genesis_coin_id: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin], unwind_fee: int) -> List[CoinSpend]:
     current_puzzle_hash = construct_cat_puzzle(CAT_MOD, tail_hash_bytes, unwind_target_puzzle_hash_bytes).get_tree_hash(unwind_target_puzzle_hash_bytes)
 
     print(f"Getting unwind for {current_puzzle_hash}")
@@ -175,10 +185,11 @@ async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: Wal
 
     print(f"{len(required_coin_spends)} spends required to unwind the bag to {unwind_target_puzzle_hash_bytes}")
 
-    for coin_spend in required_coin_spends[::-1]:
-        await unwind_coin_spend(full_node_client, wallet_client, tail_hash_bytes, coin_spend)
+    return required_coin_spends[::-1]
 
-async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32):
+        
+
+async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, unwind_fee: int):
     full_node_client = await FullNodeRpcClient.create(chia_config["self_hostname"], chia_config["full_node"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
     wallet_client = await WalletRpcClient.create(chia_config["self_hostname"], chia_config["wallet"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
 
@@ -186,21 +197,81 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
     _, parent_puzzle_lookup = secure_the_bag(targets, leaf_width, tail_hash_bytes)
 
     if unwind_target_puzzle_hash_bytes is not None:
+        # Unwinding to a single target has to be done sequentially as each spend is dependant on the parent being spent
         print(f"Unwinding secured bag to {unwind_target_puzzle_hash_bytes}")
 
-        await unwind_the_bag(full_node_client, wallet_client, unwind_target_puzzle_hash_bytes, tail_hash_bytes, genesis_coin_id, parent_puzzle_lookup)
+        coin_spends = await unwind_the_bag(full_node_client, wallet_client, unwind_target_puzzle_hash_bytes, tail_hash_bytes, genesis_coin_id, parent_puzzle_lookup, unwind_fee)
+        
+        for coin_spend in coin_spends[::-1]:
+            cat_spend = await unwind_coin_spend(full_node_client, tail_hash_bytes, coin_spend)
+            wallet_client_f, _ = await get_wallet(wallet_client, None)
+            response = await wallet_client_f.push_tx(cat_spend)
+
+            print("Transaction pushed to full node", response)
+
+            # Wait for parent coin to be spent before attempting to spend children
+            await wait_for_coin_spend(full_node_client, coin_spend.coin.name())
     else:
+        # Unwinding the entire secured bag can involve batching spends together for speed
+        # Care must be taken to only batch together spends where the parent has been spent otherwise one invalid spend could invalidate the entire spend bundle
         print("Unwinding entire secured bag")
 
         batched_targets = batch_the_bag(targets, leaf_width)
 
-        tasks = []
+        # Dictionary of spends at each level of the tree so they can be batched based on parents that have already been spent
+        level_coin_spends: Dict[int, Dict[str, CoinSpend]] = defaultdict(dict)
+        max_depth = 0
 
         # Unwind to the first target coin in each batch
         for batch_targets in batched_targets:
-            tasks.append(unwind_the_bag(full_node_client, wallet_client, batch_targets[0].puzzle_hash, tail_hash_bytes, genesis_coin_id, parent_puzzle_lookup))
+            unwound_spends = await unwind_the_bag(full_node_client, wallet_client, batch_targets[0].puzzle_hash, tail_hash_bytes, genesis_coin_id, parent_puzzle_lookup, unwind_fee)
+
+            print(f"{len(unwound_spends)} spends to {batch_targets[0].puzzle_hash}")
+
+            for (index, coin_spend) in enumerate(unwound_spends):
+                level_coin_spends[index][coin_spend.coin.puzzle_hash.hex()] = coin_spend
+                if index > max_depth:
+                    max_depth = index
         
-        await asyncio.gather(*tasks)
+        for depth in range(0, max_depth + 1):
+            level = level_coin_spends[depth]
+
+            # Larger batch_size e.g. 25 can result in COST_EXCEEDS_MAX
+            batch_size = 10
+            spent_coin_names: List[bytes32] = []
+            bundle_spends: List[CoinSpend] = []
+
+            print(f"About to iterate {len(level.values())} times for depth {depth}") 
+
+            i = 0
+            for coin_spend in level.values():
+                i += 1
+                cat_spend = await unwind_coin_spend(full_node_client, tail_hash_bytes, coin_spend)
+                wallet_client_f, _ = await get_wallet(wallet_client, None)
+
+                bundle_spends += cat_spend.coin_spends
+                spent_coin_names.append(coin_spend.coin.name())
+
+                print(f"len(bundle_spends) {len(bundle_spends)}")
+                print(f"i == len(level.values() {i == len(level.values())}")
+
+                if len(bundle_spends) >= batch_size or i == len(level.values()):
+                    await wallet_client_f.push_tx(SpendBundle(bundle_spends, cat_spend.aggregated_signature))
+
+                    print(f"Transaction containing {len(bundle_spends)} coin spends at tree depth {depth} pushed to full node")
+
+                    bundle_spends = []
+
+                    # Wait for this batch to be spent before attempting next spends
+                    # Important for spending children of coins we just created
+                    coin_spend_waits: List[Coroutine] = []
+                    
+                    for coin_name in spent_coin_names:
+                        coin_spend_waits.append(wait_for_coin_spend(full_node_client, coin_name))
+                    
+                    await asyncio.gather(*coin_spend_waits)
+                    
+                    spent_coin_names = []
 
     full_node_client.close()
     wallet_client.close()
@@ -232,12 +303,21 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
     required=False,
     help="Puzzle hash of target to unwind from secured bag",
 )
+@click.option(
+    "-uf",
+    "--unwind-fee",
+    required=True,
+    default=0,
+    show_default=True,
+    help="Fee paid for each unwind spend. Enough mojos must be available to cover all spends.",
+)
 def cli(
     ctx: click.Context,
     genesis_coin_id: str,
     tail_hash: str,
     secure_the_bag_targets_path: str,
-    unwind_target_puzzle_hash: str
+    unwind_target_puzzle_hash: str,
+    unwind_fee: int
 ):
     ctx.ensure_object(dict)
 
@@ -252,7 +332,7 @@ def cli(
     chia_config = load_config(chia_root, "config.yaml")
 
     asyncio.get_event_loop().run_until_complete(
-        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, genesis_coin_id)
+        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, genesis_coin_id, unwind_fee)
     )
 
 
