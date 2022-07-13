@@ -23,6 +23,7 @@ setup(
     entry_points={
         "console_scripts": [
             "cats = cats.cats:main",
+            "secure_the_bag = cats.secure_the_bag:main",
             "unwind_the_bag = cats.unwind_the_bag:main"
         ],
     },

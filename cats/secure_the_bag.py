@@ -1,18 +1,56 @@
+import click
 import csv
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Iterable, List, Tuple, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from clvm_tools.binutils import assemble
+from clvm_tools.clvmc import compile_clvm_text
+
 
 # Fees spend asserts this. Message not required as inner puzzle contains hardcoded coin spends and doesn't accept a solution.
 EMPTY_COIN_ANNOUNCEMENT = [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None]
 
+# The clvm loaders in this library automatically search for includable files in the directory './include'
+def append_include(search_paths: Iterable[str]) -> List[str]:
+    if search_paths:
+        search_list = list(search_paths)
+        search_list.append("./include")
+        return search_list
+    else:
+        return ["./include"]
+
+
+def parse_program(program: Union[str, Program], include: Iterable = []) -> Program:
+    if isinstance(program, Program):
+        return program
+    else:
+        if "(" in program:  # If it's raw clvm
+            prog = Program.to(assemble(program))
+        elif "." not in program:  # If it's a byte string
+            prog = Program.from_bytes(hexstr_to_bytes(program))
+        else:  # If it's a file
+            with open(program, "r") as file:
+                filestring: str = file.read()
+                if "(" in filestring:  # If it's not compiled
+                    # TODO: This should probably be more robust
+                    if re.compile(r"\(mod\s").search(filestring):  # If it's Chialisp
+                        prog = Program.to(
+                            compile_clvm_text(filestring, append_include(include))
+                        )
+                    else:  # If it's CLVM
+                        prog = Program.to(assemble(filestring))
+                else:  # If it's serialized CLVM
+                    prog = Program.from_bytes(hexstr_to_bytes(filestring))
+        return prog
 
 class Target:
     puzzle_hash: bytes32
@@ -136,3 +174,83 @@ def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount:
             raise Exception("Net amount of targets not expected amount. Expected {} but got {}".format(target_amount, net_amount))
 
     return targets
+
+
+@click.command()
+@click.pass_context
+@click.option(
+    "-l",
+    "--tail",
+    required=True,
+    help="The TAIL program to launch this CAT with",
+)
+@click.option(
+    "-c",
+    "--curry",
+    multiple=True,
+    help="An argument to curry into the TAIL",
+)
+@click.option(
+    "-a",
+    "--amount",
+    required=True,
+    type=int,
+    help="The amount to issue in mojos (regular XCH will be used to fund this)",
+)
+@click.option(
+    "-stbtp",
+    "--secure-the-bag-targets-path",
+    help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
+)
+@click.option(
+    "-lw",
+    "--leaf-width",
+    required=True,
+    default=100,
+    show_default=True,
+    help="Secure the bag leaf width",
+)
+@click.option(
+    "-pr",
+    "--prefix",
+    required=True,
+    default="xch",
+    show_default=True,
+    help="Address prefix",
+)
+def cli(
+    ctx: click.Context,
+    tail: str,
+    curry: Tuple[str],
+    amount: int,
+    secure_the_bag_targets_path: str,
+    leaf_width: int,
+    prefix: str
+):
+    ctx.ensure_object(dict)
+
+    tail = parse_program(tail)
+    curried_args = [assemble(arg) for arg in curry]
+
+    # Construct the TAIL
+    if len(curried_args) > 0:
+        curried_tail = tail.curry(*curried_args)
+    else:
+        curried_tail = tail
+
+    targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
+    root_puzzle_hash, _ = secure_the_bag(targets, leaf_width, None)
+    outer_root_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash)
+
+    print(f"Secure the bag root puzzle hash: {outer_root_puzzle_hash}")
+
+    address = encode_puzzle_hash(root_puzzle_hash, prefix)
+
+    print(f"Secure the bag root address: {address}")
+
+def main():
+    cli()
+
+
+if __name__ == "__main__":
+    main()

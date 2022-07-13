@@ -290,8 +290,8 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
 @click.command()
 @click.pass_context
 @click.option(
-    "-gcid",
-    "--genesis-coin-id",
+    "-ecid",
+    "--eve-coin-id",
     required=True,
     help="ID of coin that was spent to create secured bag",
 )
@@ -337,7 +337,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
 )
 def cli(
     ctx: click.Context,
-    genesis_coin_id: str,
+    eve_coin_id: str,
     tail_hash: str,
     secure_the_bag_targets_path: str,
     unwind_target_puzzle_hash: str,
@@ -347,7 +347,7 @@ def cli(
 ):
     ctx.ensure_object(dict)
 
-    genesis_coin_id = bytes32.fromhex(genesis_coin_id)
+    eve_coin_id = bytes32.fromhex(eve_coin_id)
     tail_hash_bytes = bytes32.fromhex(tail_hash)
     unwind_target_puzzle_hash_bytes = None
     if unwind_target_puzzle_hash:
@@ -357,7 +357,7 @@ def cli(
     chia_config = load_config(chia_root, "config.yaml")
 
     asyncio.get_event_loop().run_until_complete(
-        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, genesis_coin_id, wallet_id, unwind_fee)
+        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, eve_coin_id, wallet_id, unwind_fee)
     )
 
 

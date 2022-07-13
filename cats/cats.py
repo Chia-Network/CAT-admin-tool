@@ -9,7 +9,6 @@ from blspy import G2Element, AugSchemeMPL
 
 from chia.cmds.wallet_funcs import get_wallet
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.config import load_config
 from chia.util.ints import uint16
@@ -25,8 +24,6 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.util.bech32m import decode_puzzle_hash
-from cats.secure_the_bag import read_secure_the_bag_targets, secure_the_bag
-
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 async def get_client() -> Optional[WalletRpcClient]:
@@ -132,7 +129,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option(
     "-t",
     "--send-to",
-    required=False,
+    required=True,
     help="The address these CATs will appear at once they are issued",
 )
 @click.option(
@@ -192,19 +189,6 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     is_flag=True,
     help="Automatically push transaction to the network in quiet mode",
 )
-@click.option(
-    "-stbtp",
-    "--secure-the-bag-targets-path",
-    help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
-)
-@click.option(
-    "-lw",
-    "--leaf-width",
-    required=True,
-    default=100,
-    show_default=True,
-    help="Secure the bag leaf width",
-)
 def cli(
     ctx: click.Context,
     tail: str,
@@ -219,15 +203,14 @@ def cli(
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
-    push: bool,
-    secure_the_bag_targets_path: str,
-    leaf_width: int
+    push: bool
 ):
     ctx.ensure_object(dict)
 
     tail = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
+    address = decode_puzzle_hash(send_to)
 
     aggregated_signature = G2Element()
     for sig in signature:
@@ -246,15 +229,6 @@ def cli(
         curried_tail = tail.curry(*curried_args)
     else:
         curried_tail = tail
-    
-    if secure_the_bag_targets_path:
-        targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
-        root_puzzle_hash, _ = secure_the_bag(targets, leaf_width, None)
-        outer_root_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash)
-        print(f"Secure the bag root puzzle hash: {outer_root_puzzle_hash}")
-        address = root_puzzle_hash
-    else:
-        address = decode_puzzle_hash(send_to)
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
@@ -273,16 +247,14 @@ def cli(
         filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
     )[0]
 
-    primary_coin = list(
-        filter(
-            lambda c: c.name() == eve_coin.parent_coin_info,
-            signed_tx.spend_bundle.removals(),
-        )
-    )[0]
-
     # This is where we exit if we're only looking for the selected coin
     if select_coin:
-        
+        primary_coin = list(
+            filter(
+                lambda c: c.name() == eve_coin.parent_coin_info,
+                signed_tx.spend_bundle.removals(),
+            )
+        )[0]
         print(json.dumps(primary_coin.to_json_dict(), sort_keys=True, indent=4))
         print(f"Name: {primary_coin.name().hex()}")
         return
@@ -297,8 +269,6 @@ def cli(
         limitations_program_reveal=curried_tail,
     )
     eve_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_eve])
-
-    print(f"Secure the bag genesis coin ID: {eve_coin.name()}")
 
     # Aggregate everything together
     final_bundle = SpendBundle.aggregate(
@@ -330,7 +300,8 @@ def cli(
             return
         print(f"Successfully pushed the transaction to the network")
 
-    print(f"Asset ID / TAIL Hash: {curried_tail.get_tree_hash().hex()}")
+    print(f"Asset ID: {curried_tail.get_tree_hash().hex()}")
+    print(f"Eve Coin ID: {eve_coin.name()}")
     if not confirmation:
         print(f"Spend Bundle: {final_bundle_dump}")
 
