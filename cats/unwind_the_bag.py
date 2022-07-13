@@ -9,6 +9,7 @@ from pathlib import Path
 from chia.cmds.wallet_funcs import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -199,8 +200,13 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
             change_address = await wallet_client.get_next_address(wallet_id=wallet_id, new_address=False)
             change_ph = decode_puzzle_hash(change_address)
 
+            # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
+            cat_announcements: List[Announcement] = []
+            for coin_spend in cat_spend.coin_spends:
+                cat_announcements.append(Announcement(coin_spend.coin.name(), b"$" ,b"ca"))
+
             # Create signed coin spends and change for fees
-            fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=unwind_fee)
+            fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=unwind_fee, coin_announcements=cat_announcements)
 
             await wallet_client_f.push_tx(SpendBundle(cat_spend.coin_spends + fees_tx.spend_bundle.coin_spends, fees_tx.spend_bundle.aggregated_signature))
 
@@ -263,8 +269,15 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
                     change_address = await wallet_client.get_next_address(wallet_id=wallet_id, new_address=False)
                     change_ph = decode_puzzle_hash(change_address)
 
+                    # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
+                    cat_announcements: List[Announcement] = []
+                    for coin_spend in bundle_spends:
+                        a = Announcement(coin_spend.coin.name(), b"$", b"ca")
+                        print("looking for ", a.name())
+                        cat_announcements.append(a)
+
                     # Create signed coin spends and change for fees
-                    fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=spend_bundle_fee)
+                    fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=spend_bundle_fee, coin_announcements=cat_announcements)
 
                     await wallet_client_f.push_tx(SpendBundle(bundle_spends + fees_tx.spend_bundle.coin_spends, fees_tx.spend_bundle.aggregated_signature))
 

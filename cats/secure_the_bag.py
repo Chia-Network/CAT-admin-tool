@@ -17,7 +17,7 @@ from clvm_tools.clvmc import compile_clvm_text
 
 
 # Fees spend asserts this. Message not required as inner puzzle contains hardcoded coin spends and doesn't accept a solution.
-EMPTY_COIN_ANNOUNCEMENT = [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None]
+EMPTY_COIN_ANNOUNCEMENT = [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"]
 
 # The clvm loaders in this library automatically search for includable files in the directory './include'
 def append_include(search_paths: Iterable[str]) -> List[str]:
