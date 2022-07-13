@@ -3,7 +3,6 @@ from collections import defaultdict
 from blspy import G2Element
 import click
 import os
-import time
 from typing import Coroutine, Dict, List
 from pathlib import Path
 
@@ -27,7 +26,6 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 from secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, TargetCoin
-from utils import get_client, get_signed_tx
 
 NULL_SIGNATURE = G2Element()
 
@@ -329,6 +327,14 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
     show_default=True,
     help="Fee paid for each unwind spend. Enough mojos must be available to cover all spends.",
 )
+@click.option(
+    "-lw",
+    "--leaf-width",
+    required=True,
+    default=100,
+    show_default=True,
+    help="Secure the bag leaf width",
+)
 def cli(
     ctx: click.Context,
     genesis_coin_id: str,
@@ -336,11 +342,11 @@ def cli(
     secure_the_bag_targets_path: str,
     unwind_target_puzzle_hash: str,
     wallet_id: int,
-    unwind_fee: int
+    unwind_fee: int,
+    leaf_width: int
 ):
     ctx.ensure_object(dict)
 
-    leaf_width = 100
     genesis_coin_id = bytes32.fromhex(genesis_coin_id)
     tail_hash_bytes = bytes32.fromhex(tail_hash)
     unwind_target_puzzle_hash_bytes = None

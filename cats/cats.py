@@ -96,7 +96,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option(
     "-t",
     "--send-to",
-    required=True,
+    required=False,
     help="The address these CATs will appear at once they are issued",
 )
 @click.option(
