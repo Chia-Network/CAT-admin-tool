@@ -14,6 +14,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import CoinSpend, SpendBundle
+from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
 from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
@@ -26,6 +27,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 from secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, TargetCoin
+from utils import get_client, get_signed_tx
 
 NULL_SIGNATURE = G2Element()
 
@@ -164,17 +166,6 @@ async def unwind_coin_spend(full_node_client: FullNodeRpcClient, tail_hash_bytes
 
     return cat_spend
 
-def combine_spend_bundles_with_fee(batch: List[SpendBundle], unwind_fee: int):
-    coin_spends: List[CoinSpend] = []
-
-    for spend_bundle in batch:
-        coin_spends += spend_bundle.coin_spends
-    
-    # if unwind_fee > 0:
-    #     # todo: add fee to spend bundle here...
-    #     foo = "bar"
-    
-    return SpendBundle(coin_spends, NULL_SIGNATURE)
 
 async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: WalletRpcClient, unwind_target_puzzle_hash_bytes: bytes32, tail_hash_bytes: bytes32, genesis_coin_id: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin]) -> List[CoinSpend]:
     current_puzzle_hash = construct_cat_puzzle(CAT_MOD, tail_hash_bytes, unwind_target_puzzle_hash_bytes).get_tree_hash(unwind_target_puzzle_hash_bytes)
@@ -186,10 +177,9 @@ async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: Wal
     print(f"{len(required_coin_spends)} spends required to unwind the bag to {unwind_target_puzzle_hash_bytes}")
 
     return required_coin_spends[::-1]
-
         
 
-async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, unwind_fee: int):
+async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, wallet_id:int, unwind_fee: int):
     full_node_client = await FullNodeRpcClient.create(chia_config["self_hostname"], chia_config["full_node"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
     wallet_client = await WalletRpcClient.create(chia_config["self_hostname"], chia_config["wallet"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
 
@@ -221,10 +211,12 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
         # Dictionary of spends at each level of the tree so they can be batched based on parents that have already been spent
         level_coin_spends: Dict[int, Dict[str, CoinSpend]] = defaultdict(dict)
         max_depth = 0
+        total_spends = 0
 
         # Unwind to the first target coin in each batch
         for batch_targets in batched_targets:
             unwound_spends = await unwind_the_bag(full_node_client, wallet_client, batch_targets[0].puzzle_hash, tail_hash_bytes, genesis_coin_id, parent_puzzle_lookup)
+            total_spends += len(unwound_spends)
 
             print(f"{len(unwound_spends)} spends to {batch_targets[0].puzzle_hash}")
 
@@ -232,6 +224,10 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
                 level_coin_spends[index][coin_spend.coin.puzzle_hash.hex()] = coin_spend
                 if index > max_depth:
                     max_depth = index
+        
+        total_fees = total_spends * unwind_fee
+        
+        print(f"{total_spends} total spends required with {total_fees} fees")
         
         for depth in range(0, max_depth + 1):
             level = level_coin_spends[depth]
@@ -253,7 +249,17 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
                 spent_coin_names.append(coin_spend.coin.name())
 
                 if len(bundle_spends) >= batch_size or i == len(level.values()):
-                    await wallet_client_f.push_tx(SpendBundle(bundle_spends, cat_spend.aggregated_signature))
+                    spend_bundle_fee = len(bundle_spends) * unwind_fee
+
+                    fee_coins = await wallet_client.select_coins(amount=spend_bundle_fee, wallet_id=wallet_id)
+                    change_amount = sum([c.amount for c in fee_coins]) - spend_bundle_fee
+                    change_address = await wallet_client.get_next_address(wallet_id=wallet_id, new_address=False)
+                    change_ph = decode_puzzle_hash(change_address)
+
+                    # Create signed coin spends and change for fees
+                    fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=spend_bundle_fee)
+
+                    await wallet_client_f.push_tx(SpendBundle(bundle_spends + fees_tx.spend_bundle.coin_spends, fees_tx.spend_bundle.aggregated_signature))
 
                     print(f"Transaction containing {len(bundle_spends)} coin spends at tree depth {depth} pushed to full node")
 
@@ -301,6 +307,12 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
     help="Puzzle hash of target to unwind from secured bag",
 )
 @click.option(
+    "-wi",
+    "--wallet-id",
+    type=int,
+    help="The wallet id to use",
+)
+@click.option(
     "-uf",
     "--unwind-fee",
     required=True,
@@ -314,6 +326,7 @@ def cli(
     tail_hash: str,
     secure_the_bag_targets_path: str,
     unwind_target_puzzle_hash: str,
+    wallet_id: int,
     unwind_fee: int
 ):
     ctx.ensure_object(dict)
@@ -329,7 +342,7 @@ def cli(
     chia_config = load_config(chia_root, "config.yaml")
 
     asyncio.get_event_loop().run_until_complete(
-        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, genesis_coin_id, unwind_fee)
+        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, genesis_coin_id, wallet_id, unwind_fee)
     )
 
 
