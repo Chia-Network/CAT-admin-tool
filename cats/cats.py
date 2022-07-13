@@ -161,6 +161,14 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     "--secure-the-bag-targets-path",
     help="Path to CSV file containing targets of secure the bag (inner puzzle hash + amount)",
 )
+@click.option(
+    "-lw",
+    "--leaf-width",
+    required=True,
+    default=100,
+    show_default=True,
+    help="Secure the bag leaf width",
+)
 def cli(
     ctx: click.Context,
     tail: str,
@@ -176,11 +184,11 @@ def cli(
     select_coin: bool,
     quiet: bool,
     push: bool,
-    secure_the_bag_targets_path: str
+    secure_the_bag_targets_path: str,
+    leaf_width: int
 ):
     ctx.ensure_object(dict)
 
-    leaf_width = 100
     tail = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
@@ -205,10 +213,9 @@ def cli(
     
     if secure_the_bag_targets_path:
         targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
-        print("Read secure the bag targets...")
         root_puzzle_hash, _ = secure_the_bag(targets, leaf_width, None)
-        print("CREATED WITH INNER ROOT PUZZLEHASH ", root_puzzle_hash)
-        print("EXPECTED OUTER ROOT PUZZLEHASH IS ", construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash))
+        outer_root_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash)
+        print(f"Secure the bag root puzzle hash: {outer_root_puzzle_hash}")
         address = root_puzzle_hash
     else:
         address = decode_puzzle_hash(send_to)
@@ -237,10 +244,6 @@ def cli(
         )
     )[0]
 
-    if secure_the_bag_targets_path:
-        secure_the_bag_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), address).get_tree_hash(address)
-        print(f"Secure the bag root puzzle hash {secure_the_bag_outer_puzzle_hash}")
-
     # This is where we exit if we're only looking for the selected coin
     if select_coin:
         
@@ -259,7 +262,7 @@ def cli(
     )
     eve_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_eve])
 
-    print(">>>>>>>>>>> Genesis coin ID for unwind is ", eve_coin.name())
+    print(f"Secure the bag genesis coin ID: {eve_coin.name()}")
 
     # Aggregate everything together
     final_bundle = SpendBundle.aggregate(
@@ -291,7 +294,7 @@ def cli(
             return
         print(f"Successfully pushed the transaction to the network")
 
-    print(f"Asset ID: {curried_tail.get_tree_hash().hex()}")
+    print(f"Asset ID / TAIL Hash: {curried_tail.get_tree_hash().hex()}")
     if not confirmation:
         print(f"Spend Bundle: {final_bundle_dump}")
 
