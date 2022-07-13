@@ -21,8 +21,10 @@ setup(
     author="Quexington",
     packages=find_packages(exclude=("tests",)),
     entry_points={
-        "console_scripts": ["cats = cats.cats:main"],
-        "console_scripts": ["unwind_the_bag = cats.unwind_the_bag:main"],
+        "console_scripts": [
+            "cats = cats.cats:main",
+            "unwind_the_bag = cats.unwind_the_bag:main"
+        ],
     },
     author_email="m.hauff@chia.net",
     setup_requires=["setuptools_scm"],

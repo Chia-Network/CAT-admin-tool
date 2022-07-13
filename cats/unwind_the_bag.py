@@ -25,7 +25,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
-from secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, TargetCoin
+from cats.secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, TargetCoin
 
 NULL_SIGNATURE = G2Element()
 
