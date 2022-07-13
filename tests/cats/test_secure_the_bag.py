@@ -66,16 +66,16 @@ def test_secure_the_bag():
     root_hash, parent_puzzle_lookup = secure_the_bag(targets, 2)
 
     # Calculates correct root hash
-    assert root_hash.hex() == "bbffed16fdfe5b4c79fced8d04d913a68ea4a028e843e4fb09df18d432713810"
+    assert root_hash.hex() == "2a21783e7b1f5ab453e45315a35c1e02c4dd7234f3f41d2d64541819431d049d"
 
-    node_1_puzzle_hash = bytes32.fromhex("59e9003d6199915750187188a631187d0bb78b32a1ae04155615cae267975b4b")
-    node_2_puzzle_hash = bytes32.fromhex("db49cd4d6507dada1f3407ebda46586d5254f8f29bbe6d360ef1b87a4c3100f8")
+    node_1_puzzle_hash = bytes32.fromhex("f2cff3b95ddbaa61a214220d67a20901c584ff16df12ec769844f391d513835c")
+    node_2_puzzle_hash = bytes32.fromhex("f45579725598a28c5572d8c534be3edf095830de0f984f0eb3d9bb251c71134b")
 
     root_puzzle = Program.to(
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     node_1_puzzle_hash,
@@ -98,7 +98,7 @@ def test_secure_the_bag():
     r = root_puzzle.run(0)
 
     expected_result = Program.to([
-        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
         [
             ConditionOpcode.CREATE_COIN,
             node_1_puzzle_hash,
@@ -120,7 +120,7 @@ def test_secure_the_bag():
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     target_1_puzzle_hash,
@@ -143,7 +143,7 @@ def test_secure_the_bag():
     r = node_1_puzzle.run(0)
 
     expected_result = Program.to([
-        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
         [
             ConditionOpcode.CREATE_COIN,
             target_1_puzzle_hash,
@@ -165,7 +165,7 @@ def test_secure_the_bag():
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     target_3_puzzle_hash,
@@ -182,7 +182,7 @@ def test_secure_the_bag():
     r = node_2_puzzle.run(0)
 
     expected_result = Program.to([
-        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
         [
             ConditionOpcode.CREATE_COIN,
             target_3_puzzle_hash,
@@ -244,18 +244,18 @@ def test_secure_bag_of_cats():
     root_hash, parent_puzzle_lookup = secure_the_bag(targets, 2, asset_id)
 
     # Calculates correct root hash
-    assert root_hash.hex() == "bbffed16fdfe5b4c79fced8d04d913a68ea4a028e843e4fb09df18d432713810"
+    assert root_hash.hex() == "2a21783e7b1f5ab453e45315a35c1e02c4dd7234f3f41d2d64541819431d049d"
 
-    node_1_inner_puzzle_hash = bytes32.fromhex("59e9003d6199915750187188a631187d0bb78b32a1ae04155615cae267975b4b")
+    node_1_inner_puzzle_hash = bytes32.fromhex("f2cff3b95ddbaa61a214220d67a20901c584ff16df12ec769844f391d513835c")
     node_1_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, node_1_inner_puzzle_hash).get_tree_hash(node_1_inner_puzzle_hash)
-    node_2_inner_puzzle_hash = bytes32.fromhex("db49cd4d6507dada1f3407ebda46586d5254f8f29bbe6d360ef1b87a4c3100f8")
+    node_2_inner_puzzle_hash = bytes32.fromhex("f45579725598a28c5572d8c534be3edf095830de0f984f0eb3d9bb251c71134b")
     node_2_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, node_2_inner_puzzle_hash).get_tree_hash(node_2_inner_puzzle_hash)
 
     root_puzzle = Program.to(
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     node_1_inner_puzzle_hash,
@@ -279,7 +279,7 @@ def test_secure_bag_of_cats():
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     target_1_inner_puzzle_hash,
@@ -303,7 +303,7 @@ def test_secure_bag_of_cats():
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     target_3_inner_puzzle_hash,
@@ -361,22 +361,22 @@ def test_parent_of_puzzle_hash():
     _, parent_puzzle_lookup = secure_the_bag(targets, 2)
 
     genesis_coin_name = bytes32.fromhex("2676b64fab1f562cc4788cb2a9dbbe31da09da9cc23118dfccf6ad741d652328")
-    expected_node_1_coin_name = bytes32.fromhex("983630b55fbb71bd86b33ecb9f6a091f672b9549c39206938b87e5844a4f24ea")
-    expected_root_coin_name = bytes32.fromhex("c3618d8833e0c9e24a4cee44a31617182fce240dc95fd1064fb0ba7eda7080a2")
+    expected_node_1_coin_name = bytes32.fromhex("32d17491d882934307218e5581b1de2d4eb27905c654afed0f0c3f8b44aa84eb")
+    expected_root_coin_name = bytes32.fromhex("f3153d27c1d14581971203f10082fa2db2fbc0fd786a9b210e43f227eca499b5")
 
-    coin_spend, puzzle_hash = parent_of_puzzle_hash(genesis_coin_name, target_1_puzzle_hash, None, parent_puzzle_lookup)
+    coin_spend, coin_name = parent_of_puzzle_hash(genesis_coin_name, target_1_puzzle_hash, None, parent_puzzle_lookup)
 
     # Coin name of node 1
     assert coin_spend.coin.name() == expected_node_1_coin_name
-    assert puzzle_hash == bytes32.fromhex("983630b55fbb71bd86b33ecb9f6a091f672b9549c39206938b87e5844a4f24ea")
+    assert coin_name == expected_node_1_coin_name
 
     node_1_puzzle_hash = parent_puzzle_lookup.get(target_1_puzzle_hash.hex()).puzzle_hash
 
-    coin_spend, puzzle_hash = parent_of_puzzle_hash(genesis_coin_name, node_1_puzzle_hash, None, parent_puzzle_lookup)
+    coin_spend, coin_name = parent_of_puzzle_hash(genesis_coin_name, node_1_puzzle_hash, None, parent_puzzle_lookup)
 
     # Coin name of root
     assert coin_spend.coin.name() == expected_root_coin_name
-    assert puzzle_hash == bytes32.fromhex("c3618d8833e0c9e24a4cee44a31617182fce240dc95fd1064fb0ba7eda7080a2")
+    assert coin_name == expected_root_coin_name
 
     root_puzzle_hash = parent_puzzle_lookup.get(node_1_puzzle_hash.hex()).puzzle_hash
 
@@ -395,7 +395,7 @@ def test_parent_of_puzzle_hash():
         (
             1,
             [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"$"],
                 [
                     ConditionOpcode.CREATE_COIN,
                     target_1_puzzle_hash,
