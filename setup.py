@@ -7,7 +7,6 @@ with open("README.md", "rt") as fh:
 
 dependencies = [
     "chia-blockchain==1.4.0",
-    "jsonpickle"
 ]
 
 dev_dependencies = [
