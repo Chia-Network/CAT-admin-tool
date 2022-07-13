@@ -177,9 +177,12 @@ async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: Wal
     return required_coin_spends[::-1]
         
 
-async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, wallet_id:int, unwind_fee: int):
+async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, fingerprint:int, wallet_id:int, unwind_fee: int):
     full_node_client = await FullNodeRpcClient.create(chia_config["self_hostname"], chia_config["full_node"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
     wallet_client = await WalletRpcClient.create(chia_config["self_hostname"], chia_config["wallet"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
+    if (fingerprint is not None):
+        print("Setting fingerprint: {}".format(fingerprint))
+        await wallet_client.log_in(fingerprint)
 
     targets = read_secure_the_bag_targets(secure_the_bag_targets_path, None)
     _, parent_puzzle_lookup = secure_the_bag(targets, leaf_width, tail_hash_bytes)
@@ -192,7 +195,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
         
         for coin_spend in coin_spends:
             cat_spend = await unwind_coin_spend(full_node_client, tail_hash_bytes, coin_spend)
-            wallet_client_f, _ = await get_wallet(wallet_client, None)
+            wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
 
             fee_coins = await wallet_client.select_coins(amount=unwind_fee, wallet_id=wallet_id)
             change_amount = sum([c.amount for c in fee_coins]) - unwind_fee
@@ -250,7 +253,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
             for coin_spend in level.values():
                 i += 1
                 cat_spend = await unwind_coin_spend(full_node_client, tail_hash_bytes, coin_spend)
-                wallet_client_f, _ = await get_wallet(wallet_client, None)
+                wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
 
                 bundle_spends += cat_spend.coin_spends
                 spent_coin_names.append(coin_spend.coin.name())
@@ -320,6 +323,13 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
     help="The wallet id to use",
 )
 @click.option(
+    "-f",
+    "--fingerprint",
+    type=int,
+    default=None,
+    help="The wallet fingerprint to use as funds",
+)
+@click.option(
     "-uf",
     "--unwind-fee",
     required=True,
@@ -341,6 +351,7 @@ def cli(
     tail_hash: str,
     secure_the_bag_targets_path: str,
     unwind_target_puzzle_hash: str,
+    fingerprint: int,
     wallet_id: int,
     unwind_fee: int,
     leaf_width: int
@@ -357,7 +368,7 @@ def cli(
     chia_config = load_config(chia_root, "config.yaml")
 
     asyncio.get_event_loop().run_until_complete(
-        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, eve_coin_id, wallet_id, unwind_fee)
+        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, eve_coin_id, fingerprint, wallet_id, unwind_fee)
     )
 
 
