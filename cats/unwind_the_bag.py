@@ -192,12 +192,21 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
 
         coin_spends = await unwind_the_bag(full_node_client, wallet_client, unwind_target_puzzle_hash_bytes, tail_hash_bytes, genesis_coin_id, parent_puzzle_lookup)
         
-        for coin_spend in coin_spends[::-1]:
+        for coin_spend in coin_spends:
             cat_spend = await unwind_coin_spend(full_node_client, tail_hash_bytes, coin_spend)
             wallet_client_f, _ = await get_wallet(wallet_client, None)
-            response = await wallet_client_f.push_tx(cat_spend)
 
-            print("Transaction pushed to full node", response)
+            fee_coins = await wallet_client.select_coins(amount=unwind_fee, wallet_id=wallet_id)
+            change_amount = sum([c.amount for c in fee_coins]) - unwind_fee
+            change_address = await wallet_client.get_next_address(wallet_id=wallet_id, new_address=False)
+            change_ph = decode_puzzle_hash(change_address)
+
+            # Create signed coin spends and change for fees
+            fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=unwind_fee)
+
+            await wallet_client_f.push_tx(SpendBundle(cat_spend.coin_spends + fees_tx.spend_bundle.coin_spends, fees_tx.spend_bundle.aggregated_signature))
+
+            print("Transaction pushed to full node")
 
             # Wait for parent coin to be spent before attempting to spend children
             await wait_for_coin_spend(full_node_client, coin_spend.coin.name())
