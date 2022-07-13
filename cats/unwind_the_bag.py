@@ -323,7 +323,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
     "-uf",
     "--unwind-fee",
     required=True,
-    default=0,
+    default=500000,
     show_default=True,
     help="Fee paid for each unwind spend. Enough mojos must be available to cover all spends.",
 )

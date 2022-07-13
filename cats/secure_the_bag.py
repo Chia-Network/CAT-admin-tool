@@ -74,7 +74,7 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
     processed = 0
 
     for batch_targets in batched_targets:
-        print(f"{(processed / batch_count) * 100}% of the way through batches")
+        print(f"{round((processed / batch_count) * 100, 2)}% of the way through batches")
 
         list_of_conditions = [EMPTY_COIN_ANNOUNCEMENT]
         total_amount = 0
