@@ -207,7 +207,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
                 # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
                 cat_announcements: List[Announcement] = []
                 for coin_spend in cat_spend.coin_spends:
-                    cat_announcements.append(Announcement(coin_spend.coin.name(), b"$", bytes.fromhex("ca")))
+                    cat_announcements.append(Announcement(coin_spend.coin.name(), b"$"))
 
                 # Create signed coin spends and change for fees
                 fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=unwind_fee, coin_announcements=cat_announcements)
@@ -279,7 +279,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
                         # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
                         cat_announcements: List[Announcement] = []
                         for coin_spend in bundle_spends:
-                            cat_announcements.append(Announcement(coin_spend.coin.name(), b"$", bytes.fromhex("ca")))
+                            cat_announcements.append(Announcement(coin_spend.coin.name(), b"$"))
 
                         # Create signed coin spends and change for fees
                         fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=spend_bundle_fee, coin_announcements=cat_announcements)
