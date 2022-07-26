@@ -6,11 +6,13 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chia-blockchain@git+https://github.com/Chia-Network/chia-blockchain.git@main#fa2cdd6492bcffbe61f50fde8b5e1d4fd2ac5a16",
+    "chia-blockchain==1.5.0",
 ]
 
 dev_dependencies = [
-    "black",
+    "black==21.12b0",
+    "pytest",
+    "pytest-env",
 ]
 
 setup(
@@ -19,7 +21,11 @@ setup(
     author="Quexington",
     packages=find_packages(exclude=("tests",)),
     entry_points={
-        "console_scripts": ["cats = cats.cats:main"],
+        "console_scripts": [
+            "cats = cats.cats:main",
+            "secure_the_bag = cats.secure_the_bag:main",
+            "unwind_the_bag = cats.unwind_the_bag:main"
+        ],
     },
     author_email="m.hauff@chia.net",
     setup_requires=["setuptools_scm"],
