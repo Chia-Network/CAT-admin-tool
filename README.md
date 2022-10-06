@@ -21,7 +21,7 @@ git clone https://github.com/Chia-Network/CAT-admin-tool.git
 cd CAT-admin-tool
 py -m venv venv
 ./venv/Scripts/activate
-python -m pip install --upgrade pip setuptools wheel
+py -m pip install --upgrade pip setuptools wheel
 pip install .
 ```
 
