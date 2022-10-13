@@ -7,7 +7,7 @@ import json
 from typing import Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
 
-from chia.cmds.wallet_funcs import get_wallet
+from chia.cmds.cmds_util import get_wallet
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.config import load_config
