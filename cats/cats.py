@@ -39,6 +39,8 @@ async def get_context_manager(fingerprint: int) -> Optional[Any]:
 async def get_signed_tx(fingerprint, ph, amt, fee):
     async with get_context_manager(fingerprint) as client_etc:
         wallet_client, _, _ = client_etc
+        if wallet_client is None:
+            raise ValueError("Error getting wallet client. Make sure wallet is running.")
         return await wallet_client.create_signed_transaction(
             [{"puzzle_hash": ph, "amount": amt}], fee=fee
         )
@@ -47,6 +49,8 @@ async def get_signed_tx(fingerprint, ph, amt, fee):
 async def push_tx(fingerprint, bundle):
     async with get_context_manager(fingerprint) as client_etc:
         wallet_client, _, _ = client_etc
+        if wallet_client is None:
+            raise ValueError("Error getting wallet client. Make sure wallet is running.")
         return await wallet_client.push_tx(bundle)
 
 
