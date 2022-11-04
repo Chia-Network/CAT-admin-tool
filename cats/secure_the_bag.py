@@ -59,7 +59,7 @@ class Target:
     def __init__(self, puzzle_hash: bytes32, amount: uint64) -> None:
         self.puzzle_hash = puzzle_hash
         self.amount = amount
-    
+
     def create_coin_condition(self) -> Tuple[bytes, bytes32, uint64, Tuple[bytes32]]:
         return [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount, [self.puzzle_hash]]
 
@@ -84,7 +84,7 @@ def batch_the_bag(targets: List[Target], leaf_width: int) -> List[List[Target]]:
 
     for index, target in enumerate(targets):
         current_batch.append(target)
-        
+
         if len(current_batch) == leaf_width or index == len(targets) - 1:
             results.append(current_batch)
             current_batch = []
@@ -134,7 +134,7 @@ def secure_the_bag(targets: List[Target], leaf_width: int, asset_id: Union[bytes
 
         for target in batch_targets:
             if asset_id is not None:
-                target_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target.puzzle_hash).get_tree_hash(target.puzzle_hash)
+                target_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target.puzzle_hash).get_tree_hash_precalc(target.puzzle_hash)
                 parent_puzzle_lookup[target_outer_puzzle_hash.hex()] = TargetCoin(target, outer_puzzle, amount)
             else:
                 parent_puzzle_lookup[target.puzzle_hash.hex()] = TargetCoin(target, puzzle, amount)
@@ -240,7 +240,7 @@ def cli(
 
     targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
     root_puzzle_hash, _ = secure_the_bag(targets, leaf_width, None)
-    outer_root_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash(root_puzzle_hash)
+    outer_root_puzzle_hash = construct_cat_puzzle(CAT_MOD, curried_tail.get_tree_hash(), root_puzzle_hash).get_tree_hash_precalc(root_puzzle_hash)
 
     print(f"Secure the bag root puzzle hash: {outer_root_puzzle_hash}")
 
