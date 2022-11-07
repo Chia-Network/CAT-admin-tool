@@ -218,13 +218,13 @@ def test_secure_the_bag():
 def test_secure_bag_of_cats():
     asset_id = bytes32.fromhex("6d95dae356e32a71db5ddcb42224754a02524c615c5fc35f568c2af04774e589")
     target_1_inner_puzzle_hash = bytes32.fromhex("4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba")
-    target_1_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target_1_inner_puzzle_hash).get_tree_hash(target_1_inner_puzzle_hash)
+    target_1_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target_1_inner_puzzle_hash).get_tree_hash_precalc(target_1_inner_puzzle_hash)
     target_1_amount = uint64(10000000000000000)
     target_2_inner_puzzle_hash = bytes32.fromhex("f3d5162330c4d6c8b9a0aba5eed999178dd2bf466a7a0289739acc8209122e2c")
-    target_2_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target_2_inner_puzzle_hash).get_tree_hash(target_2_inner_puzzle_hash)
+    target_2_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target_2_inner_puzzle_hash).get_tree_hash_precalc(target_2_inner_puzzle_hash)
     target_2_amount = uint64(32100000000)
     target_3_inner_puzzle_hash = bytes32.fromhex("7ffdeca4f997bde55d249b4a3adb8077782bc4134109698e95b10ea306a138b4")
-    target_3_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target_3_inner_puzzle_hash).get_tree_hash(target_3_inner_puzzle_hash)
+    target_3_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, target_3_inner_puzzle_hash).get_tree_hash_precalc(target_3_inner_puzzle_hash)
     target_3_amount = uint64(10000000000000000)
 
     targets = [
@@ -247,9 +247,9 @@ def test_secure_bag_of_cats():
     assert root_hash.hex() == "2a21783e7b1f5ab453e45315a35c1e02c4dd7234f3f41d2d64541819431d049d"
 
     node_1_inner_puzzle_hash = bytes32.fromhex("f2cff3b95ddbaa61a214220d67a20901c584ff16df12ec769844f391d513835c")
-    node_1_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, node_1_inner_puzzle_hash).get_tree_hash(node_1_inner_puzzle_hash)
+    node_1_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, node_1_inner_puzzle_hash).get_tree_hash_precalc(node_1_inner_puzzle_hash)
     node_2_inner_puzzle_hash = bytes32.fromhex("f45579725598a28c5572d8c534be3edf095830de0f984f0eb3d9bb251c71134b")
-    node_2_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, node_2_inner_puzzle_hash).get_tree_hash(node_2_inner_puzzle_hash)
+    node_2_outer_puzzle_hash = construct_cat_puzzle(CAT_MOD, asset_id, node_2_inner_puzzle_hash).get_tree_hash_precalc(node_2_inner_puzzle_hash)
 
     root_puzzle = Program.to(
         (
