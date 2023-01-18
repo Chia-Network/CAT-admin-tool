@@ -6,7 +6,7 @@ import os
 from typing import Coroutine, Dict, List
 from pathlib import Path
 
-from chia.cmds.wallet_funcs import get_wallet
+from chia.cmds.cmds_util import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.announcement import Announcement
@@ -23,6 +23,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
@@ -55,16 +56,16 @@ async def wait_for_unspent_coin(full_node_client: FullNodeRpcClient, coin_name: 
     Raises an exception if coin has already been spent.
     """
     while True:
-        print(f"Waiting for unspent coin {coin_name}")
+        print(f"Waiting for unspent coin {coin_name.hex()}")
 
         exists = await unspent_coin_exists(full_node_client, coin_name)
 
         if exists:
-            print(f"Coin {coin_name} exists and is unspent")
+            print(f"Coin {coin_name.hex()} exists and is unspent")
 
             break
 
-        print(f"Unspent coin {coin_name} does not exist")
+        print(f"Unspent coin {coin_name.hex()} does not exist")
 
         await asyncio.sleep(3)
 
@@ -76,21 +77,21 @@ async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: by
     This is used to wait for coins spend before spending children.
     """
     while True:
-        print(f"Waiting for coin spend {coin_name}")
+        print(f"Waiting for coin spend {coin_name.hex()}")
 
         coin_record = await full_node_client.get_coin_record_by_name(coin_name)
 
         if coin_record is None:
-            print(f"Coin {coin_name} does not exist")
+            print(f"Coin {coin_name.hex()} does not exist")
 
             continue
 
         if coin_record.spent_block_index > 0:
-            print(f"Coin {coin_name} has been spent")
+            print(f"Coin {coin_name.hex()} has been spent")
 
             break
 
-        print(f"Coin {coin_name} has not been spent")
+        print(f"Coin {coin_name.hex()} has not been spent")
 
         await asyncio.sleep(3)
 
@@ -133,9 +134,9 @@ async def unwind_coin_spend(full_node_client: FullNodeRpcClient, tail_hash_bytes
     # Wait for unspent coin to exist before trying to spend it
     await wait_for_unspent_coin(full_node_client, coin_spend.coin.name())
 
-    matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal)
+    curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
 
-    if matched is None:
+    if curried_args is None:
         raise Exception("Expected CAT")
 
     _, _, inner_puzzle = curried_args
@@ -144,9 +145,9 @@ async def unwind_coin_spend(full_node_client: FullNodeRpcClient, tail_hash_bytes
     parent_r: CoinRecord = await full_node_client.get_coin_record_by_name(coin_spend.coin.parent_coin_info)
     parent: CoinSpend = await full_node_client.get_puzzle_and_solution(coin_spend.coin.parent_coin_info, parent_r.spent_block_index)
 
-    parent_matched, parent_curried_args = match_cat_puzzle(parent.puzzle_reveal)
+    parent_curried_args = match_cat_puzzle(uncurry_puzzle(parent.puzzle_reveal))
 
-    if parent_matched is None:
+    if parent_curried_args is None:
         raise Exception("Expected parent to be CAT")
 
     _, _, parent_inner_puzzle = parent_curried_args
@@ -167,7 +168,7 @@ async def unwind_coin_spend(full_node_client: FullNodeRpcClient, tail_hash_bytes
 
 
 async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: WalletRpcClient, unwind_target_puzzle_hash_bytes: bytes32, tail_hash_bytes: bytes32, genesis_coin_id: bytes32, parent_puzzle_lookup: Dict[str, TargetCoin]) -> List[CoinSpend]:
-    current_puzzle_hash = construct_cat_puzzle(CAT_MOD, tail_hash_bytes, unwind_target_puzzle_hash_bytes).get_tree_hash(unwind_target_puzzle_hash_bytes)
+    current_puzzle_hash = construct_cat_puzzle(CAT_MOD, tail_hash_bytes, unwind_target_puzzle_hash_bytes).get_tree_hash_precalc(unwind_target_puzzle_hash_bytes)
 
     print(f"Getting unwind for {current_puzzle_hash}")
 
@@ -262,7 +263,7 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
             for coin_spend in level.values():
                 i += 1
                 cat_spend = await unwind_coin_spend(full_node_client, tail_hash_bytes, coin_spend)
-                wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
+                await get_wallet(wallet_client, fingerprint)
 
                 bundle_spends += cat_spend.coin_spends
                 spent_coin_names.append(coin_spend.coin.name())
@@ -284,9 +285,9 @@ async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_wid
                         # Create signed coin spends and change for fees
                         fees_tx = await wallet_client.create_signed_transaction([{ "amount": change_amount, "puzzle_hash": change_ph }], coins=fee_coins, fee=spend_bundle_fee, coin_announcements=cat_announcements)
 
-                        await wallet_client_f.push_tx(SpendBundle(bundle_spends + fees_tx.spend_bundle.coin_spends, fees_tx.spend_bundle.aggregated_signature))
+                        await wallet_client.push_tx(SpendBundle(bundle_spends + fees_tx.spend_bundle.coin_spends, fees_tx.spend_bundle.aggregated_signature))
                     else:
-                        await wallet_client_f.push_tx(SpendBundle(bundle_spends, cat_spend.aggregated_signature))
+                        await wallet_client.push_tx(SpendBundle(bundle_spends, cat_spend.aggregated_signature))
 
                     print(f"Transaction containing {len(bundle_spends)} coin spends at tree depth {depth} pushed to full node")
 
