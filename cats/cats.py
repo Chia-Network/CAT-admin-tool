@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
 
-from chia.cmds.cmds_util import get_any_service_client
+from chia.cmds.cmds_util import get_any_service_client, get_wallet
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.config import load_config
@@ -32,13 +32,21 @@ async def get_context_manager(fingerprint: int) -> Optional[Any]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     wallet_rpc_port = config["wallet"]["rpc_port"]
-    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as args:
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as args:
+        wallet_client, _ = args
+        if wallet_client is None:
+            return
+
+        new_fp = await get_wallet(DEFAULT_ROOT_PATH, wallet_client, fingerprint)
+        if new_fp is None:
+            return
+
         yield args
 
 
 async def get_signed_tx(fingerprint, ph, amt, fee):
     async with get_context_manager(fingerprint) as client_etc:
-        wallet_client, _, _ = client_etc
+        wallet_client, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
         return await wallet_client.create_signed_transaction(
@@ -48,7 +56,7 @@ async def get_signed_tx(fingerprint, ph, amt, fee):
 
 async def push_tx(fingerprint, bundle):
     async with get_context_manager(fingerprint) as client_etc:
-        wallet_client, _, _ = client_etc
+        wallet_client, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
         return await wallet_client.push_tx(bundle)
