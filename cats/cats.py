@@ -32,7 +32,7 @@ async def get_context_manager(fingerprint: int) -> Optional[Any]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     wallet_rpc_port = config["wallet"]["rpc_port"]
-    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as args:
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, fingerprint=fingerprint) as args:
         yield args
 
 
