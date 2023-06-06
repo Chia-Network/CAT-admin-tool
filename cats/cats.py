@@ -7,6 +7,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import Any, Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
+from pathlib import Path
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -28,16 +29,16 @@ from chia.util.bech32m import decode_puzzle_hash
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 @asynccontextmanager
-async def get_context_manager(fingerprint: int) -> Optional[Any]:
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+async def get_context_manager(fingerprint: int, root_path) -> Optional[Any]:
+    config = load_config(root_path, "config.yaml")
     self_hostname = config["self_hostname"]
     wallet_rpc_port = config["wallet"]["rpc_port"]
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, fingerprint=fingerprint) as args:
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
         yield args
 
 
-async def get_signed_tx(fingerprint, ph, amt, fee):
-    async with get_context_manager(fingerprint) as client_etc:
+async def get_signed_tx(fingerprint, ph, amt, fee, root_path):
+    async with get_context_manager(fingerprint, root_path) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
@@ -46,8 +47,8 @@ async def get_signed_tx(fingerprint, ph, amt, fee):
         )
 
 
-async def push_tx(fingerprint, bundle):
-    async with get_context_manager(fingerprint) as client_etc:
+async def push_tx(fingerprint, bundle, root_path):
+    async with get_context_manager(fingerprint, root_path) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
@@ -176,6 +177,9 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     is_flag=True,
     help="Automatically push transaction to the network in quiet mode",
 )
+@click.option(
+    "--root-path", default=DEFAULT_ROOT_PATH, help="The root folder where the config lies", type=click.Path(), show_default=True
+)
 def cli(
     ctx: click.Context,
     tail: str,
@@ -190,7 +194,8 @@ def cli(
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
-    push: bool
+    push: bool,
+    root_path: click.Path,
 ):
     ctx.ensure_object(dict)
 
@@ -228,7 +233,7 @@ def cli(
 
     # Get a signed transaction from the wallet
     signed_tx = asyncio.get_event_loop().run_until_complete(
-        get_signed_tx(fingerprint, cat_ph, amount, fee)
+        get_signed_tx(fingerprint, cat_ph, amount, fee, Path(root_path))
     )
     eve_coin = list(
         filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
@@ -280,7 +285,7 @@ def cli(
         ) in ["y", "Y", "yes", "Yes"]
     if confirmation:
         response = asyncio.get_event_loop().run_until_complete(
-            push_tx(fingerprint, final_bundle)
+            push_tx(fingerprint, final_bundle, Path(root_path))
         )
         if "error" in response:
             print(f"Error pushing transaction: {response['error']}")
