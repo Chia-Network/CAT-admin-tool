@@ -6,7 +6,7 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chia-blockchain==1.8.1",
+    "chik-blockchain==1.8.1",
 ]
 
 dev_dependencies = [
@@ -27,12 +27,12 @@ setup(
             "unwind_the_bag = cats.unwind_the_bag:main"
         ],
     },
-    author_email="m.hauff@chia.net",
+    author_email="admin@chiknetwork.com",
     setup_requires=["setuptools_scm"],
     install_requires=dependencies,
-    url="https://github.com/Chia-Network",
+    url="https://github.com/Chik-Network",
     license="https://opensource.org/licenses/Apache-2.0",
-    description="Tools to administer issuance and redemption of a Chia Asset Token or CAT",
+    description="Tools to administer issuance and redemption of a Chik Asset Token or CAT",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
@@ -44,7 +44,7 @@ setup(
         dev=dev_dependencies,
     ),
     project_urls={
-        "Bug Reports": "https://github.com/Chia-Network/cat-admin-tool",
-        "Source": "https://github.com/Chia-Network/cat-admin-tool",
+        "Bug Reports": "https://github.com/Chik-Network/cat-admin-tool",
+        "Source": "https://github.com/Chik-Network/cat-admin-tool",
     },
 )

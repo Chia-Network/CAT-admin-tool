@@ -8,25 +8,25 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
 
-from chia.cmds.cmds_util import get_any_service_client
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.config import load_config
-from chia.util.ints import uint16
-from chia.util.byte_types import hexstr_to_bytes
-from chia.types.blockchain_format.program import Program
+from chik.cmds.cmds_util import get_any_service_client
+from chik.rpc.wallet_rpc_client import WalletRpcClient
+from chik.util.default_root import DEFAULT_ROOT_PATH
+from chik.util.config import load_config
+from chik.util.ints import uint16
+from chik.util.byte_types import hexstr_to_bytes
+from chik.types.blockchain_format.program import Program
 from clvm_tools.clvmc import compile_clvm_text
 from clvm_tools.binutils import assemble
-from chia.types.spend_bundle import SpendBundle
-from chia.wallet.cat_wallet.cat_utils import (
+from chik.types.spend_bundle import SpendBundle
+from chik.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     CAT_MOD,
     SpendableCAT,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.util.bech32m import decode_puzzle_hash
+from chik.util.bech32m import decode_puzzle_hash
 
-# Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
+# Loading the client requires the standard chik root directory configuration that all of the chik commands rely on
 @asynccontextmanager
 async def get_context_manager(fingerprint: int) -> Optional[Any]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -77,7 +77,7 @@ def parse_program(program: Union[str, Program], include: Iterable = []) -> Progr
                 filestring: str = file.read()
                 if "(" in filestring:  # If it's not compiled
                     # TODO: This should probably be more robust
-                    if re.compile(r"\(mod\s").search(filestring):  # If it's Chialisp
+                    if re.compile(r"\(mod\s").search(filestring):  # If it's Chiklisp
                         prog = Program.to(
                             compile_clvm_text(filestring, append_include(include))
                         )

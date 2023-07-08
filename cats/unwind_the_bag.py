@@ -6,26 +6,26 @@ import os
 from typing import Coroutine, Dict, List
 from pathlib import Path
 
-from chia.cmds.cmds_util import get_wallet
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import CoinSpend, SpendBundle
-from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import load_config
-from chia.wallet.cat_wallet.cat_utils import (
+from chik.cmds.cmds_util import get_wallet
+from chik.rpc.full_node_rpc_client import FullNodeRpcClient
+from chik.rpc.wallet_rpc_client import WalletRpcClient
+from chik.types.announcement import Announcement
+from chik.types.blockchain_format.program import Program
+from chik.types.blockchain_format.sized_bytes import bytes32
+from chik.types.coin_record import CoinRecord
+from chik.types.spend_bundle import CoinSpend, SpendBundle
+from chik.util.bech32m import decode_puzzle_hash
+from chik.util.config import load_config
+from chik.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     CAT_MOD,
     SpendableCAT,
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chik.wallet.uncurried_puzzle import uncurry_puzzle
+from chik.wallet.lineage_proof import LineageProof
+from chik.wallet.puzzles.cat_loader import CAT_MOD
 
 from cats.secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, TargetCoin
 
@@ -179,9 +179,9 @@ async def unwind_the_bag(full_node_client: FullNodeRpcClient, wallet_client: Wal
     return required_coin_spends[::-1]
         
 
-async def app(chia_config, chia_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, fingerprint:int, wallet_id:int, unwind_fee: int):
-    full_node_client = await FullNodeRpcClient.create(chia_config["self_hostname"], chia_config["full_node"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
-    wallet_client = await WalletRpcClient.create(chia_config["self_hostname"], chia_config["wallet"]["rpc_port"], chia_root, load_config(chia_root, "config.yaml"))
+async def app(chik_config, chik_root, secure_the_bag_targets_path: str, leaf_width: int, tail_hash_bytes: bytes32, unwind_target_puzzle_hash_bytes: bytes32, genesis_coin_id: bytes32, fingerprint:int, wallet_id:int, unwind_fee: int):
+    full_node_client = await FullNodeRpcClient.create(chik_config["self_hostname"], chik_config["full_node"]["rpc_port"], chik_root, load_config(chik_root, "config.yaml"))
+    wallet_client = await WalletRpcClient.create(chik_config["self_hostname"], chik_config["wallet"]["rpc_port"], chik_root, load_config(chik_root, "config.yaml"))
     if (fingerprint is not None):
         print("Setting fingerprint: {}".format(fingerprint))
         await wallet_client.log_in(fingerprint)
@@ -382,11 +382,11 @@ def cli(
     if unwind_target_puzzle_hash:
         unwind_target_puzzle_hash_bytes = bytes32.fromhex(unwind_target_puzzle_hash)
 
-    chia_root: Path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/mainnet"))).resolve()
-    chia_config = load_config(chia_root, "config.yaml")
+    chik_root: Path = Path(os.path.expanduser(os.getenv("CHIK_ROOT", "~/.chik/mainnet"))).resolve()
+    chik_config = load_config(chik_root, "config.yaml")
 
     asyncio.get_event_loop().run_until_complete(
-        app(chia_config, chia_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, eve_coin_id, fingerprint, wallet_id, unwind_fee)
+        app(chik_config, chik_root, secure_the_bag_targets_path, leaf_width, tail_hash_bytes, unwind_target_puzzle_hash_bytes, eve_coin_id, fingerprint, wallet_id, unwind_fee)
     )
 
 
