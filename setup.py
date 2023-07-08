@@ -6,7 +6,7 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chik-blockchain==main",
+    "chik-blockchain==1.8.2",
 ]
 
 dev_dependencies = [
