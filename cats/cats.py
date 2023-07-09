@@ -124,7 +124,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     "--amount",
     required=True,
     type=int,
-    help="The amount to issue in mojos (regular XCH will be used to fund this)",
+    help="The amount to issue in mojos (regular XCK will be used to fund this)",
 )
 @click.option(
     "-m",

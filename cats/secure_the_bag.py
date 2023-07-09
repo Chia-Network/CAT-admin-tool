@@ -195,7 +195,7 @@ def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount:
     "--amount",
     required=True,
     type=int,
-    help="The amount to issue in mojos (regular XCH will be used to fund this)",
+    help="The amount to issue in mojos (regular XCK will be used to fund this)",
 )
 @click.option(
     "-stbtp",
@@ -214,7 +214,7 @@ def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount:
     "-pr",
     "--prefix",
     required=True,
-    default="xch",
+    default="xck",
     show_default=True,
     help="Address prefix",
 )
