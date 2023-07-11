@@ -7,6 +7,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import Any, Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
+from pathlib import Path
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -28,16 +29,15 @@ from chia.util.bech32m import decode_puzzle_hash
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 @asynccontextmanager
-async def get_context_manager(fingerprint: int) -> Optional[Any]:
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    self_hostname = config["self_hostname"]
-    wallet_rpc_port = config["wallet"]["rpc_port"]
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, fingerprint=fingerprint) as args:
+async def get_context_manager(wallet_rpc_port: Optional[int], fingerprint: int, root_path) -> Optional[Any]:
+    config = load_config(root_path, "config.yaml")
+    _wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
+    async with get_any_service_client(WalletRpcClient, _wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
         yield args
 
 
-async def get_signed_tx(fingerprint, ph, amt, fee):
-    async with get_context_manager(fingerprint) as client_etc:
+async def get_signed_tx(wallet_rpc_port, fingerprint, ph, amt, fee, root_path):
+    async with get_context_manager(wallet_rpc_port, fingerprint, root_path) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
@@ -46,8 +46,8 @@ async def get_signed_tx(fingerprint, ph, amt, fee):
         )
 
 
-async def push_tx(fingerprint, bundle):
-    async with get_context_manager(fingerprint) as client_etc:
+async def push_tx(wallet_rpc_port, fingerprint, bundle, root_path):
+    async with get_context_manager(wallet_rpc_port, fingerprint, root_path) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
@@ -176,6 +176,12 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     is_flag=True,
     help="Automatically push transaction to the network in quiet mode",
 )
+@click.option(
+    "--root-path", default=DEFAULT_ROOT_PATH, help="The root folder where the config lies", type=click.Path(), show_default=True
+)
+@click.option(
+    "--wallet-rpc-port", default=None, help="The RPC port the wallet service is running on", type=int
+)
 def cli(
     ctx: click.Context,
     tail: str,
@@ -190,10 +196,50 @@ def cli(
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
-    push: bool
+    push: bool,
+    root_path: click.Path,
+    wallet_rpc_port: Optional[int],
 ):
     ctx.ensure_object(dict)
 
+    asyncio.run(
+        cmd_func(
+            tail,
+            curry,
+            solution,
+            send_to,
+            amount,
+            fee,
+            fingerprint,
+            signature,
+            spend,
+            as_bytes,
+            select_coin,
+            quiet,
+            push,
+            root_path,
+            wallet_rpc_port,
+        )
+    )
+
+
+async def cmd_func(
+    tail: str,
+    curry: Tuple[str],
+    solution: str,
+    send_to: str,
+    amount: int,
+    fee: int,
+    fingerprint: int,
+    signature: Tuple[str],
+    spend: Tuple[str],
+    as_bytes: bool,
+    select_coin: bool,
+    quiet: bool,
+    push: bool,
+    root_path: click.Path,
+    wallet_rpc_port: Optional[int],
+) -> None:
     tail = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
@@ -227,9 +273,7 @@ def cli(
     cat_ph = cat_puzzle.get_tree_hash()
 
     # Get a signed transaction from the wallet
-    signed_tx = asyncio.get_event_loop().run_until_complete(
-        get_signed_tx(fingerprint, cat_ph, amount, fee)
-    )
+    signed_tx = await get_signed_tx(wallet_rpc_port, fingerprint, cat_ph, amount, fee, Path(root_path))
     eve_coin = list(
         filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
     )[0]
@@ -279,9 +323,7 @@ def cli(
             "The transaction has been created, would you like to push it to the network? (Y/N)"
         ) in ["y", "Y", "yes", "Yes"]
     if confirmation:
-        response = asyncio.get_event_loop().run_until_complete(
-            push_tx(fingerprint, final_bundle)
-        )
+        response = await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
         if "error" in response:
             print(f"Error pushing transaction: {response['error']}")
             return
