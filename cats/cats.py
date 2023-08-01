@@ -15,8 +15,8 @@ from chik.util.config import load_config
 from chik.util.ints import uint16
 from chik.util.byte_types import hexstr_to_bytes
 from chik.types.blockchain_format.program import Program
-from clvm_tools.clvmc import compile_clvm_text
-from clvm_tools.binutils import assemble
+from klvm_tools.klvmc import compile_klvm_text
+from klvm_tools.binutils import assemble
 from chik.types.spend_bundle import SpendBundle
 from chik.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
@@ -54,7 +54,7 @@ async def push_tx(fingerprint, bundle):
         return await wallet_client.push_tx(bundle)
 
 
-# The clvm loaders in this library automatically search for includable files in the directory './include'
+# The klvm loaders in this library automatically search for includable files in the directory './include'
 def append_include(search_paths: Iterable[str]) -> List[str]:
     if search_paths:
         search_list = list(search_paths)
@@ -68,7 +68,7 @@ def parse_program(program: Union[str, Program], include: Iterable = []) -> Progr
     if isinstance(program, Program):
         return program
     else:
-        if "(" in program:  # If it's raw clvm
+        if "(" in program:  # If it's raw klvm
             prog = Program.to(assemble(program))
         elif "." not in program:  # If it's a byte string
             prog = Program.from_bytes(hexstr_to_bytes(program))
@@ -79,11 +79,11 @@ def parse_program(program: Union[str, Program], include: Iterable = []) -> Progr
                     # TODO: This should probably be more robust
                     if re.compile(r"\(mod\s").search(filestring):  # If it's Chiklisp
                         prog = Program.to(
-                            compile_clvm_text(filestring, append_include(include))
+                            compile_klvm_text(filestring, append_include(include))
                         )
-                    else:  # If it's CLVM
+                    else:  # If it's KLVM
                         prog = Program.to(assemble(filestring))
-                else:  # If it's serialized CLVM
+                else:  # If it's serialized KLVM
                     prog = Program.from_bytes(hexstr_to_bytes(filestring))
         return prog
 
