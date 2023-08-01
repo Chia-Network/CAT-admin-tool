@@ -25,7 +25,7 @@ from chik.wallet.cat_wallet.cat_utils import (
 )
 from chik.wallet.uncurried_puzzle import uncurry_puzzle
 from chik.wallet.lineage_proof import LineageProof
-from chik.wallet.puzzles.cat_loader import CAT_MOD
+from chik.wallet.cat_wallet.cat_utils import CAT_MOD
 
 from cats.secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, TargetCoin
 
