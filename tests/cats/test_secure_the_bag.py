@@ -9,7 +9,7 @@ from chik.util.hash import std_hash
 from chik.util.ints import uint64
 from chik.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chik.wallet.puzzles.cat_loader import CAT_MOD
-from klvm.casts import int_to_bytes
+from clvm.casts import int_to_bytes
 
 def test_batch_the_bag():
     targets = [
