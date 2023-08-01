@@ -25,7 +25,7 @@ jobs:
       max-parallel: 4
 
     env:
-      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      CHIK_ROOT: ${{ github.workspace }}/.chik/mainnet
       BLOCKS_AND_PLOTS_VERSION: 0.29.0
 
     steps:
@@ -46,8 +46,8 @@ jobs:
       id: test-blocks-plots
       with:
         path: |
-          ${{ github.workspace }}/.chia/blocks
-          ${{ github.workspace }}/.chia/test-plots
+          ${{ github.workspace }}/.chik/blocks
+          ${{ github.workspace }}/.chik/test-plots
         key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
     - name: Checkout test blocks and plots
@@ -55,9 +55,9 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
-        mkdir "${GITHUB_WORKSPACE}/.chia"
-        mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
+        gh release download -R Chik-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
+        mkdir "${GITHUB_WORKSPACE}/.chik"
+        mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chik"
 
     - name: Test code with pytest
       run: |

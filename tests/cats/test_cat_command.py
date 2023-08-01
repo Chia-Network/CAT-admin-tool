@@ -3,12 +3,12 @@ import io
 import contextlib
 import pytest
 
-from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint64
+from chik.simulator.setup_nodes import SimulatorsAndWalletsServices
+from chik.types.blockchain_format.coin import Coin
+from chik.types.blockchain_format.sized_bytes import bytes32
+from chik.types.peer_info import PeerInfo
+from chik.util.bech32m import encode_puzzle_hash
+from chik.util.ints import uint16, uint64
 
 from cats.cats import cmd_func
 
@@ -33,7 +33,7 @@ async def test_cat_mint(one_wallet_and_one_simulator_services: SimulatorsAndWall
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
-    self_address = encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "xch")
+    self_address = encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "xck")
     fingerprint = wallet_0.wallet_state_manager.private_key.get_g1().get_fingerprint()
     root_path = str(wallet_service_0.root_path)
 
