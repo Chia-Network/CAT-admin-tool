@@ -2,16 +2,16 @@ import click
 import csv
 from typing import Dict, Iterable, List, Tuple, Union
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chik.types.blockchain_format.coin import Coin
+from chik.types.blockchain_format.program import Program
+from chik.types.blockchain_format.sized_bytes import bytes32
+from chik.types.spend_bundle import CoinSpend
+from chik.types.condition_opcodes import ConditionOpcode
+from chik.util.bech32m import encode_puzzle_hash
+from chik.util.byte_types import hexstr_to_bytes
+from chik.util.ints import uint64
+from chik.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chik.wallet.puzzles.cat_loader import CAT_MOD
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
 
@@ -42,7 +42,7 @@ def parse_program(program: Union[str, Program], include: Iterable = []) -> Progr
                 filestring: str = file.read()
                 if "(" in filestring:  # If it's not compiled
                     # TODO: This should probably be more robust
-                    if re.compile(r"\(mod\s").search(filestring):  # If it's Chialisp
+                    if re.compile(r"\(mod\s").search(filestring):  # If it's Chiklisp
                         prog = Program.to(
                             compile_clvm_text(filestring, append_include(include))
                         )
@@ -195,7 +195,7 @@ def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount:
     "--amount",
     required=True,
     type=int,
-    help="The amount to issue in mojos (regular XCH will be used to fund this)",
+    help="The amount to issue in mojos (regular XCK will be used to fund this)",
 )
 @click.option(
     "-stbtp",
@@ -214,7 +214,7 @@ def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount:
     "-pr",
     "--prefix",
     required=True,
-    default="xch",
+    default="xck",
     show_default=True,
     help="Address prefix",
 )

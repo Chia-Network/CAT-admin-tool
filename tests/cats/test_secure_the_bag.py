@@ -2,13 +2,13 @@ import pytest
 
 from cats.secure_the_bag import batch_the_bag, parent_of_puzzle_hash, read_secure_the_bag_targets, secure_the_bag, Target
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.hash import std_hash
-from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chik.types.blockchain_format.program import Program
+from chik.types.blockchain_format.sized_bytes import bytes32
+from chik.types.condition_opcodes import ConditionOpcode
+from chik.util.hash import std_hash
+from chik.util.ints import uint64
+from chik.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chik.wallet.puzzles.cat_loader import CAT_MOD
 from clvm.casts import int_to_bytes
 
 def test_batch_the_bag():
