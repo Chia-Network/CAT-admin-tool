@@ -11,7 +11,7 @@ from chik.util.bech32m import encode_puzzle_hash
 from chik.util.byte_types import hexstr_to_bytes
 from chik.util.ints import uint64
 from chik.wallet.cat_wallet.cat_utils import construct_cat_puzzle
-from chik.wallet.puzzles.cat_loader import CAT_MOD
+from chik.wallet.cat_wallet.cat_utils import CAT_MOD
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
 
