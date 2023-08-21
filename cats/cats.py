@@ -9,7 +9,7 @@ from typing import Any, Optional, Tuple, Iterable, Union, List
 from blspy import G2Element, AugSchemeMPL
 from pathlib import Path
 
-from chia.cmds.cmds_util import get_any_service_client, get_wallet
+from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.config import load_config
@@ -26,6 +26,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.util.bech32m import decode_puzzle_hash
 
@@ -34,7 +35,7 @@ from chia.util.bech32m import decode_puzzle_hash
 async def get_context_manager(wallet_rpc_port: Optional[int], fingerprint: int, root_path) -> Optional[Any]:
     config = load_config(root_path, "config.yaml")
     _wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
-    async with get_any_service_client(WalletRpcClient, _wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
+    async with get_wallet_client(wallet_rpc_port=wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
         yield args
 
 
@@ -44,7 +45,7 @@ async def get_signed_tx(wallet_rpc_port, fingerprint, ph, amt, fee, root_path):
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
         return await wallet_client.create_signed_transaction(
-            [{"puzzle_hash": ph, "amount": amt}], fee=fee
+            [{"puzzle_hash": ph, "amount": amt}], DEFAULT_TX_CONFIG, fee=fee  # TODO: no default tx config
         )
 
 
@@ -247,6 +248,9 @@ def cli(
             send_to,
             amount,
             fee,
+            authorized_provider,
+            proofs_checker,
+            cr_flag,
             fingerprint,
             signature,
             spend,
@@ -267,6 +271,9 @@ async def cmd_func(
     send_to: str,
     amount: int,
     fee: int,
+    authorized_provider: Tuple[str],
+    proofs_checker: Optional[str],
+    cr_flag: Tuple[str],
     fingerprint: int,
     signature: Tuple[str],
     spend: Tuple[str],
