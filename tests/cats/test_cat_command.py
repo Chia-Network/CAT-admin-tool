@@ -17,7 +17,7 @@ from cats.cats import cmd_func
 @pytest.mark.asyncio
 async def test_cat_mint(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
-):
+) -> None:
     # Wallet environment setup
     num_blocks = 1
     full_nodes, wallets, bt = one_wallet_and_one_simulator_services
@@ -27,6 +27,7 @@ async def test_cat_mint(
     wallet_node_0 = wallet_service_0._node
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     assert wallet_service_0.rpc_server is not None
+    assert wallet_service_0.rpc_server.webserver is not None
 
     wallet_node_0.config["automatically_add_unknown_cats"] = True
     wallet_node_0.config["trusted_peers"] = {

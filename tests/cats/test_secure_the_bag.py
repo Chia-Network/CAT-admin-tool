@@ -18,7 +18,7 @@ from cats.secure_the_bag import (
 )
 
 
-def test_batch_the_bag():
+def test_batch_the_bag() -> None:
     targets = [
         Target(
             bytes32.fromhex(
@@ -61,7 +61,7 @@ def test_batch_the_bag():
     assert results[1][0].amount == uint64(10000000000000000)
 
 
-def test_secure_the_bag():
+def test_secure_the_bag() -> None:
     target_1_puzzle_hash = bytes32.fromhex(
         "4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba"
     )
@@ -230,6 +230,10 @@ def test_secure_the_bag():
     puzzle_create_target_2 = parent_puzzle_lookup.get(target_2_puzzle_hash.hex())
     puzzle_create_target_3 = parent_puzzle_lookup.get(target_3_puzzle_hash.hex())
 
+    assert puzzle_create_target_1 is not None
+    assert puzzle_create_target_2 is not None
+    assert puzzle_create_target_3 is not None
+
     # Targets 1 & 2 are created by spending node 1
     assert (
         puzzle_create_target_1.puzzle.get_tree_hash().hex() == node_1_puzzle_hash.hex()
@@ -246,12 +250,15 @@ def test_secure_the_bag():
     puzzle_create_node_1 = parent_puzzle_lookup.get(node_1_puzzle_hash.hex())
     puzzle_create_node_2 = parent_puzzle_lookup.get(node_2_puzzle_hash.hex())
 
+    assert puzzle_create_node_1 is not None
+    assert puzzle_create_node_2 is not None
+
     # Nodes 1 & 2 are created by spending root
     assert puzzle_create_node_1.puzzle.get_tree_hash().hex() == root_hash.hex()
     assert puzzle_create_node_2.puzzle.get_tree_hash().hex() == root_hash.hex()
 
 
-def test_secure_bag_of_cats():
+def test_secure_bag_of_cats() -> None:
     asset_id = bytes32.fromhex(
         "6d95dae356e32a71db5ddcb42224754a02524c615c5fc35f568c2af04774e589"
     )
@@ -259,21 +266,21 @@ def test_secure_bag_of_cats():
         "4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba"
     )
     target_1_outer_puzzle_hash = construct_cat_puzzle(
-        CAT_MOD, asset_id, target_1_inner_puzzle_hash
+        CAT_MOD, asset_id, Program.to(target_1_inner_puzzle_hash)
     ).get_tree_hash_precalc(target_1_inner_puzzle_hash)
     target_1_amount = uint64(10000000000000000)
     target_2_inner_puzzle_hash = bytes32.fromhex(
         "f3d5162330c4d6c8b9a0aba5eed999178dd2bf466a7a0289739acc8209122e2c"
     )
     target_2_outer_puzzle_hash = construct_cat_puzzle(
-        CAT_MOD, asset_id, target_2_inner_puzzle_hash
+        CAT_MOD, asset_id, Program.to(target_2_inner_puzzle_hash)
     ).get_tree_hash_precalc(target_2_inner_puzzle_hash)
     target_2_amount = uint64(32100000000)
     target_3_inner_puzzle_hash = bytes32.fromhex(
         "7ffdeca4f997bde55d249b4a3adb8077782bc4134109698e95b10ea306a138b4"
     )
     target_3_outer_puzzle_hash = construct_cat_puzzle(
-        CAT_MOD, asset_id, target_3_inner_puzzle_hash
+        CAT_MOD, asset_id, Program.to(target_3_inner_puzzle_hash)
     ).get_tree_hash_precalc(target_3_inner_puzzle_hash)
     target_3_amount = uint64(10000000000000000)
 
@@ -294,13 +301,13 @@ def test_secure_bag_of_cats():
         "f2cff3b95ddbaa61a214220d67a20901c584ff16df12ec769844f391d513835c"
     )
     node_1_outer_puzzle_hash = construct_cat_puzzle(
-        CAT_MOD, asset_id, node_1_inner_puzzle_hash
+        CAT_MOD, asset_id, Program.to(node_1_inner_puzzle_hash)
     ).get_tree_hash_precalc(node_1_inner_puzzle_hash)
     node_2_inner_puzzle_hash = bytes32.fromhex(
         "f45579725598a28c5572d8c534be3edf095830de0f984f0eb3d9bb251c71134b"
     )
     node_2_outer_puzzle_hash = construct_cat_puzzle(
-        CAT_MOD, asset_id, node_2_inner_puzzle_hash
+        CAT_MOD, asset_id, Program.to(node_2_inner_puzzle_hash)
     ).get_tree_hash_precalc(node_2_inner_puzzle_hash)
 
     root_puzzle = Program.to(
@@ -374,6 +381,10 @@ def test_secure_bag_of_cats():
     puzzle_create_target_2 = parent_puzzle_lookup.get(target_2_outer_puzzle_hash.hex())
     puzzle_create_target_3 = parent_puzzle_lookup.get(target_3_outer_puzzle_hash.hex())
 
+    assert puzzle_create_target_1 is not None
+    assert puzzle_create_target_2 is not None
+    assert puzzle_create_target_3 is not None
+
     # Targets 1 & 2 are created by spending node 1
     assert (
         puzzle_create_target_1.puzzle.get_tree_hash().hex()
@@ -393,6 +404,9 @@ def test_secure_bag_of_cats():
     puzzle_create_node_1 = parent_puzzle_lookup.get(node_1_outer_puzzle_hash.hex())
     puzzle_create_node_2 = parent_puzzle_lookup.get(node_2_outer_puzzle_hash.hex())
 
+    assert puzzle_create_node_1 is not None
+    assert puzzle_create_node_2 is not None
+
     # Nodes 1 & 2 are created by spending root
     assert (
         puzzle_create_node_1.puzzle.get_tree_hash().hex()
@@ -404,7 +418,7 @@ def test_secure_bag_of_cats():
     )
 
 
-def test_parent_of_puzzle_hash():
+def test_parent_of_puzzle_hash() -> None:
     target_1_puzzle_hash = bytes32.fromhex(
         "4bc6435b409bcbabe53870dae0f03755f6aabb4594c5915ec983acf12a5d1fba"
     )
@@ -436,29 +450,32 @@ def test_parent_of_puzzle_hash():
     )
 
     coin_spend, coin_name = parent_of_puzzle_hash(
-        genesis_coin_name, target_1_puzzle_hash, None, parent_puzzle_lookup
+        genesis_coin_name, target_1_puzzle_hash, parent_puzzle_lookup
     )
 
     # Coin name of node 1
+    assert coin_spend is not None
     assert coin_spend.coin.name() == expected_node_1_coin_name
     assert coin_name == expected_node_1_coin_name
 
-    node_1_puzzle_hash = parent_puzzle_lookup.get(
-        target_1_puzzle_hash.hex()
-    ).puzzle_hash
+    pp = parent_puzzle_lookup.get(target_1_puzzle_hash.hex())
+    assert pp is not None
+    node_1_puzzle_hash = pp.puzzle_hash
 
     coin_spend, coin_name = parent_of_puzzle_hash(
-        genesis_coin_name, node_1_puzzle_hash, None, parent_puzzle_lookup
+        genesis_coin_name, node_1_puzzle_hash, parent_puzzle_lookup
     )
 
     # Coin name of root
+    assert coin_spend is not None
     assert coin_spend.coin.name() == expected_root_coin_name
     assert coin_name == expected_root_coin_name
-
-    root_puzzle_hash = parent_puzzle_lookup.get(node_1_puzzle_hash.hex()).puzzle_hash
+    pp = parent_puzzle_lookup.get(node_1_puzzle_hash.hex())
+    assert pp is not None
+    root_puzzle_hash = pp.puzzle_hash
 
     coin_spend, puzzle_hash = parent_of_puzzle_hash(
-        genesis_coin_name, root_puzzle_hash, None, parent_puzzle_lookup
+        genesis_coin_name, root_puzzle_hash, parent_puzzle_lookup
     )
 
     # Genesis
@@ -507,7 +524,7 @@ def test_parent_of_puzzle_hash():
     assert node_1_coin_name == expected_node_1_coin_name
 
 
-def test_read_secure_the_bag_targets():
+def test_read_secure_the_bag_targets() -> None:
     targets = read_secure_the_bag_targets("./tests/cats/test.csv", 20000032100000000)
 
     assert len(targets) == 3
@@ -528,6 +545,6 @@ def test_read_secure_the_bag_targets():
     assert targets[2].amount == uint64(10000000000000000)
 
 
-def test_read_secure_the_bag_targets_invalid_net_amount():
+def test_read_secure_the_bag_targets_invalid_net_amount() -> None:
     with pytest.raises(Exception):
         read_secure_the_bag_targets("test.csv", 5000000)

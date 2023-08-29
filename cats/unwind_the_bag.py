@@ -4,7 +4,7 @@ import asyncio
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Coroutine, Dict, List
+from typing import Any, Coroutine, Dict, List, Optional
 
 import click
 from blspy import G2Element
@@ -14,10 +14,11 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import CoinSpend, SpendBundle
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
+from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -39,7 +40,9 @@ from cats.secure_the_bag import (
 NULL_SIGNATURE = G2Element()
 
 
-async def unspent_coin_exists(full_node_client: FullNodeRpcClient, coin_name: bytes32):
+async def unspent_coin_exists(
+    full_node_client: FullNodeRpcClient, coin_name: bytes32
+) -> bool:
     """
     Checks if an unspent coin exists.
 
@@ -58,7 +61,7 @@ async def unspent_coin_exists(full_node_client: FullNodeRpcClient, coin_name: by
 
 async def wait_for_unspent_coin(
     full_node_client: FullNodeRpcClient, coin_name: bytes32
-):
+) -> None:
     """
     Repeatedly poll full node until unspent coin is created.
 
@@ -79,7 +82,9 @@ async def wait_for_unspent_coin(
         await asyncio.sleep(3)
 
 
-async def wait_for_coin_spend(full_node_client: FullNodeRpcClient, coin_name: bytes32):
+async def wait_for_coin_spend(
+    full_node_client: FullNodeRpcClient, coin_name: bytes32
+) -> None:
     """
     Repeatedly poll full node until coin is spent.
 
@@ -121,7 +126,7 @@ async def get_unwind(
             break
 
         coin_spend, _ = parent_of_puzzle_hash(
-            genesis_coin_id, current_puzzle_hash, tail_hash_bytes, parent_puzzle_lookup
+            genesis_coin_id, current_puzzle_hash, parent_puzzle_lookup
         )
 
         if coin_spend is None:
@@ -155,7 +160,9 @@ async def unwind_coin_spend(
     # Wait for unspent coin to exist before trying to spend it
     await wait_for_unspent_coin(full_node_client, coin_spend.coin.name())
 
-    curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
+    curried_args = match_cat_puzzle(
+        uncurry_puzzle(coin_spend.puzzle_reveal.to_program())
+    )
 
     if curried_args is None:
         raise Exception("Expected CAT")
@@ -163,14 +170,20 @@ async def unwind_coin_spend(
     _, _, inner_puzzle = curried_args
 
     # Get parent coin info as required for lineage proof when spending this CAT coin
-    parent_r: CoinRecord = await full_node_client.get_coin_record_by_name(
+    parent_r = await full_node_client.get_coin_record_by_name(
         coin_spend.coin.parent_coin_info
     )
-    parent: CoinSpend = await full_node_client.get_puzzle_and_solution(
+    if parent_r is None:
+        raise Exception("Parent coin does not exist")
+    parent = await full_node_client.get_puzzle_and_solution(
         coin_spend.coin.parent_coin_info, parent_r.spent_block_index
     )
+    if parent is None:
+        raise Exception("Parent coin does not exist")
 
-    parent_curried_args = match_cat_puzzle(uncurry_puzzle(parent.puzzle_reveal))
+    parent_curried_args = match_cat_puzzle(
+        uncurry_puzzle(parent.puzzle_reveal.to_program())
+    )
 
     if parent_curried_args is None:
         raise Exception("Expected parent to be CAT")
@@ -185,7 +198,7 @@ async def unwind_coin_spend(
         lineage_proof=LineageProof(
             parent_r.coin.parent_coin_info,
             parent_inner_puzzle.get_tree_hash(),
-            parent.coin.amount,
+            uint64(parent.coin.amount),
         ),
     )
     cat_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
@@ -207,7 +220,7 @@ async def unwind_the_bag(
     parent_puzzle_lookup: Dict[str, TargetCoin],
 ) -> List[CoinSpend]:
     current_puzzle_hash = construct_cat_puzzle(
-        CAT_MOD, tail_hash_bytes, unwind_target_puzzle_hash_bytes
+        CAT_MOD, tail_hash_bytes, Program.to(unwind_target_puzzle_hash_bytes)
     ).get_tree_hash_precalc(unwind_target_puzzle_hash_bytes)
 
     print(f"Getting unwind for {current_puzzle_hash}")
@@ -228,17 +241,17 @@ async def unwind_the_bag(
 
 
 async def app(
-    chia_config,
-    chia_root,
+    chia_config: Dict[str, Any],
+    chia_root: Path,
     secure_the_bag_targets_path: str,
     leaf_width: int,
     tail_hash_bytes: bytes32,
-    unwind_target_puzzle_hash_bytes: bytes32,
+    unwind_target_puzzle_hash_bytes: Optional[bytes32],
     genesis_coin_id: bytes32,
     fingerprint: int,
     wallet_id: int,
     unwind_fee: int,
-):
+) -> None:
     full_node_client = await FullNodeRpcClient.create(
         chia_config["self_hostname"],
         chia_config["full_node"]["rpc_port"],
@@ -275,7 +288,11 @@ async def app(
             cat_spend = await unwind_coin_spend(
                 full_node_client, tail_hash_bytes, coin_spend
             )
-            wallet_client_f, _ = await get_wallet(wallet_client, fingerprint)
+            await get_wallet(
+                root_path=chia_root,
+                wallet_client=wallet_client,
+                fingerprint=fingerprint,
+            )
 
             if unwind_fee > 0:
                 fee_coins = await wallet_client.select_coins(
@@ -296,20 +313,23 @@ async def app(
                 fees_tx = await wallet_client.create_signed_transaction(
                     [{"amount": change_amount, "puzzle_hash": change_ph}],
                     coins=fee_coins,
-                    fee=unwind_fee,
+                    fee=uint64(unwind_fee),
                     coin_announcements=cat_announcements,
                 )
 
-                await wallet_client_f.push_tx(
+                if fees_tx.spend_bundle is None:
+                    raise Exception("No spend bundle created")
+
+                await wallet_client.push_tx(
                     SpendBundle(
                         cat_spend.coin_spends + fees_tx.spend_bundle.coin_spends,
                         fees_tx.spend_bundle.aggregated_signature,
-                    )
+                    )  # type: ignore[no-untyped-call]
                 )
             else:
-                await wallet_client_f.push_tx(
+                await wallet_client.push_tx(
                     SpendBundle(cat_spend.coin_spends, cat_spend.aggregated_signature)
-                )
+                )  # type: ignore[no-untyped-call]
 
             print("Transaction pushed to full node")
 
@@ -368,7 +388,11 @@ async def app(
                 cat_spend = await unwind_coin_spend(
                     full_node_client, tail_hash_bytes, coin_spend
                 )
-                await get_wallet(wallet_client, fingerprint)
+                await get_wallet(
+                    root_path=chia_root,
+                    wallet_client=wallet_client,
+                    fingerprint=fingerprint,
+                )
 
                 bundle_spends += cat_spend.coin_spends
                 spent_coin_names.append(coin_spend.coin.name())
@@ -389,7 +413,7 @@ async def app(
                         change_ph = decode_puzzle_hash(change_address)
 
                         # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
-                        cat_announcements: List[Announcement] = []
+                        cat_announcements = []
                         for coin_spend in bundle_spends:
                             cat_announcements.append(
                                 Announcement(coin_spend.coin.name(), b"$")
@@ -399,20 +423,22 @@ async def app(
                         fees_tx = await wallet_client.create_signed_transaction(
                             [{"amount": change_amount, "puzzle_hash": change_ph}],
                             coins=fee_coins,
-                            fee=spend_bundle_fee,
+                            fee=uint64(spend_bundle_fee),
                             coin_announcements=cat_announcements,
                         )
+                        if fees_tx.spend_bundle is None:
+                            raise Exception("No spend bundle created")
 
                         await wallet_client.push_tx(
                             SpendBundle(
                                 bundle_spends + fees_tx.spend_bundle.coin_spends,
                                 fees_tx.spend_bundle.aggregated_signature,
-                            )
+                            )  # type: ignore[no-untyped-call]
                         )
                     else:
                         await wallet_client.push_tx(
                             SpendBundle(bundle_spends, cat_spend.aggregated_signature)
-                        )
+                        )  # type: ignore[no-untyped-call]
 
                     print(
                         f"Transaction containing {len(bundle_spends)} coin spends "
@@ -423,7 +449,7 @@ async def app(
 
                     # Wait for this batch to be spent before attempting next spends
                     # Important for spending children of coins we just created
-                    coin_spend_waits: List[Coroutine] = []
+                    coin_spend_waits: List[Coroutine[Any, Any, None]] = []
 
                     for coin_name in spent_coin_names:
                         coin_spend_waits.append(
@@ -503,10 +529,10 @@ def cli(
     wallet_id: int,
     unwind_fee: int,
     leaf_width: int,
-):
+) -> None:
     ctx.ensure_object(dict)
 
-    eve_coin_id = bytes32.fromhex(eve_coin_id)
+    eve_coin_id_bytes = bytes32.fromhex(eve_coin_id)
     tail_hash_bytes = bytes32.fromhex(tail_hash)
     unwind_target_puzzle_hash_bytes = None
     if unwind_target_puzzle_hash:
@@ -525,7 +551,7 @@ def cli(
             leaf_width,
             tail_hash_bytes,
             unwind_target_puzzle_hash_bytes,
-            eve_coin_id,
+            eve_coin_id_bytes,
             fingerprint,
             wallet_id,
             unwind_fee,
@@ -533,7 +559,7 @@ def cli(
     )
 
 
-def main():
+def main() -> None:
     cli()
 
 
