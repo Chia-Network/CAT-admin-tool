@@ -9,8 +9,7 @@ from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import click
 from blspy import AugSchemeMPL, G2Element
-from chia.cmds.cmds_util import get_any_service_client
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.cmds.cmds_util import get_wallet_client
 from chia.types.blockchain_format.program import Program
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash
@@ -36,8 +35,8 @@ async def get_context_manager(
     _wallet_rpc_port = (
         config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
     )
-    async with get_any_service_client(
-        WalletRpcClient, _wallet_rpc_port, root_path=root_path, fingerprint=fingerprint
+    async with get_wallet_client(
+        _wallet_rpc_port, root_path=root_path, fingerprint=fingerprint
     ) as args:
         yield args
 
