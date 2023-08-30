@@ -64,4 +64,4 @@ jobs:
         python3 -m venv venv
         . ./venv/bin/activate
         pip install .[dev]
-        ./venv/bin/py.test tests/ -s -v --durations 0
+        ./venv/bin/pytest tests/ -s -v --durations 0
