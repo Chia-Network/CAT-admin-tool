@@ -6,11 +6,11 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chik-blockchain==1.8.3rc1",
+    "chik-blockchain==2.0.0",
 ]
 
 dev_dependencies = [
-    "black==21.12b0",
+    "black==23.7.0",
     "pytest",
     "pytest-asyncio",
     "pytest-env",

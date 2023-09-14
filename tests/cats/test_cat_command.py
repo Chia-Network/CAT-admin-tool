@@ -1,8 +1,9 @@
-import asyncio
-import io
-import contextlib
-import pytest
+from __future__ import annotations
 
+import contextlib
+import io
+
+import pytest
 from chik.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chik.types.blockchain_format.coin import Coin
 from chik.types.blockchain_format.sized_bytes import bytes32
@@ -12,8 +13,11 @@ from chik.util.ints import uint16, uint64
 
 from cats.cats import cmd_func
 
+
 @pytest.mark.asyncio
-async def test_cat_mint(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices):
+async def test_cat_mint(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+) -> None:
     # Wallet environment setup
     num_blocks = 1
     full_nodes, wallets, bt = one_wallet_and_one_simulator_services
@@ -23,13 +27,16 @@ async def test_cat_mint(one_wallet_and_one_simulator_services: SimulatorsAndWall
     wallet_node_0 = wallet_service_0._node
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     assert wallet_service_0.rpc_server is not None
+    assert wallet_service_0.rpc_server.webserver is not None
 
     wallet_node_0.config["automatically_add_unknown_cats"] = True
     wallet_node_0.config["trusted_peers"] = {
         full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
     }
 
-    await wallet_node_0.server.start_client(PeerInfo("127.0.0.1", uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(
+        PeerInfo("127.0.0.1", uint16(full_node_server._port)), None
+    )
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
@@ -65,7 +72,13 @@ async def test_cat_mint(one_wallet_and_one_simulator_services: SimulatorsAndWall
             wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
         )
 
-    assert f.getvalue() == '{\n    "amount": 250000000000,\n    "parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000001",\n    "puzzle_hash": "0x3ecfd2611925541707c96e689bd415f1991f018a5179d0a7072226d81453d377"\n}\nName: 9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333\n'
+    expected_str_value = (
+        '{\n    "amount": 250000000000,\n    '
+        '"parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000001",\n    '
+        '"puzzle_hash": "0x3ecfd2611925541707c96e689bd415f1991f018a5179d0a7072226d81453d377"\n}\n'
+        "Name: 9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333\n"
+    )
+    assert f.getvalue() == expected_str_value
     f.truncate(0)
 
     with contextlib.redirect_stdout(f):
@@ -110,10 +123,18 @@ async def test_cat_mint(one_wallet_and_one_simulator_services: SimulatorsAndWall
             wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
         )
 
-    await full_node_api.process_coin_spends(coins={Coin(
-        bytes32.from_hexstr("9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333"),
-        bytes32.from_hexstr("bebd0c1c65d72e260ff7bef6edc93154568f699c18ced593b585d4a6d5c28ed2"),
-        uint64(13),
-    )})
+    await full_node_api.process_coin_spends(
+        coins={
+            Coin(
+                bytes32.from_hexstr(
+                    "9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333"
+                ),
+                bytes32.from_hexstr(
+                    "bebd0c1c65d72e260ff7bef6edc93154568f699c18ced593b585d4a6d5c28ed2"
+                ),
+                uint64(13),
+            )
+        }
+    )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
     assert len(wallet_node_0.wallet_state_manager.wallets) == 2
