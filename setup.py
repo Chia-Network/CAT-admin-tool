@@ -6,7 +6,7 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chia-blockchain @ git+https://github.com/Chia-Network/chia-blockchain.git@5103130a2340b9bcdb2daeaee56270c81a600cf0",
+    "chia-blockchain @ git+https://github.com/Chia-Network/chia-blockchain.git@debeb1b5500f9aaed6d13c37ef6ce5e0c297dada",
 ]
 
 dev_dependencies = [
