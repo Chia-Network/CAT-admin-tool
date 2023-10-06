@@ -1,7 +1,10 @@
-import pytest_asyncio
+from __future__ import annotations
 
 from chia.simulator.block_tools import test_constants
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
+from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
+
 
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_and_one_simulator_services():

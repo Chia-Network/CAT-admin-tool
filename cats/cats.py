@@ -1,60 +1,89 @@
-import click
-import aiohttp
+from __future__ import annotations
+
 import asyncio
-import re
 import json
-
+import re
 from contextlib import asynccontextmanager
-from typing import Any, Optional, Tuple, Iterable, Union, List
-from blspy import G2Element, AugSchemeMPL
 from pathlib import Path
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Union
 
+import click
+from blspy import AugSchemeMPL, G2Element
 from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.config import load_config
-from chia.util.ints import uint16
-from chia.util.byte_types import hexstr_to_bytes
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from clvm_tools.clvmc import compile_clvm_text
-from clvm_tools.binutils import assemble
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
-    construct_cat_puzzle,
     CAT_MOD,
     SpendableCAT,
+    construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.util.bech32m import decode_puzzle_hash
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
+from chia.wallet.transaction_record import TransactionRecord
+from clvm_tools.binutils import assemble
+from clvm_tools.clvmc import compile_clvm_text
+
 
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 @asynccontextmanager
-async def get_context_manager(wallet_rpc_port: Optional[int], fingerprint: int, root_path) -> Optional[Any]:
+async def get_context_manager(
+    wallet_rpc_port: Optional[int], fingerprint: int, root_path: Path
+) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
     config = load_config(root_path, "config.yaml")
-    _wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
-    async with get_wallet_client(wallet_rpc_port=wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
+    _wallet_rpc_port = (
+        config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
+    )
+    async with get_wallet_client(
+        _wallet_rpc_port, root_path=root_path, fingerprint=fingerprint
+    ) as args:
         yield args
 
 
-async def get_signed_tx(wallet_rpc_port, fingerprint, ph, amt, fee, root_path):
-    async with get_context_manager(wallet_rpc_port, fingerprint, root_path) as client_etc:
+async def get_signed_tx(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    ph: bytes32,
+    amt: uint64,
+    fee: uint64,
+    root_path: Path,
+) -> TransactionRecord:
+    async with get_context_manager(
+        wallet_rpc_port, fingerprint, root_path
+    ) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
-            raise ValueError("Error getting wallet client. Make sure wallet is running.")
+            raise ValueError(
+                "Error getting wallet client. Make sure wallet is running."
+            )
         return await wallet_client.create_signed_transaction(
             [{"puzzle_hash": ph, "amount": amt}], DEFAULT_TX_CONFIG, fee=fee  # TODO: no default tx config
         )
 
 
-async def push_tx(wallet_rpc_port, fingerprint, bundle, root_path):
-    async with get_context_manager(wallet_rpc_port, fingerprint, root_path) as client_etc:
+async def push_tx(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    bundle: SpendBundle,
+    root_path: Path,
+) -> Any:
+    async with get_context_manager(
+        wallet_rpc_port, fingerprint, root_path
+    ) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
-            raise ValueError("Error getting wallet client. Make sure wallet is running.")
-        return await wallet_client.push_tx(bundle)
+            raise ValueError(
+                "Error getting wallet client. Make sure wallet is running."
+            )
+        return await wallet_client.push_tx(bundle)  # type: ignore[no-untyped-call]
 
 
 # The clvm loaders in this library automatically search for includable files in the directory './include'
@@ -67,12 +96,13 @@ def append_include(search_paths: Iterable[str]) -> List[str]:
         return ["./include"]
 
 
-def parse_program(program: Union[str, Program], include: Iterable = []) -> Program:
+def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> Program:
+    prog: Program
     if isinstance(program, Program):
         return program
     else:
         if "(" in program:  # If it's raw clvm
-            prog = Program.to(assemble(program))
+            prog = Program.to(assemble(program))  # type: ignore[no-untyped-call]
         elif "." not in program:  # If it's a byte string
             prog = Program.from_bytes(hexstr_to_bytes(program))
         else:  # If it's a file
@@ -82,10 +112,10 @@ def parse_program(program: Union[str, Program], include: Iterable = []) -> Progr
                     # TODO: This should probably be more robust
                     if re.compile(r"\(mod\s").search(filestring):  # If it's Chialisp
                         prog = Program.to(
-                            compile_clvm_text(filestring, append_include(include))
+                            compile_clvm_text(filestring, append_include(include))  # type: ignore[no-untyped-call]
                         )
                     else:  # If it's CLVM
-                        prog = Program.to(assemble(filestring))
+                        prog = Program.to(assemble(filestring))  # type: ignore[no-untyped-call]
                 else:  # If it's serialized CLVM
                     prog = Program.from_bytes(hexstr_to_bytes(filestring))
         return prog
@@ -212,15 +242,22 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="Automatically push transaction to the network in quiet mode",
 )
 @click.option(
-    "--root-path", default=DEFAULT_ROOT_PATH, help="The root folder where the config lies", type=click.Path(), show_default=True
+    "--root-path",
+    default=DEFAULT_ROOT_PATH,
+    help="The root folder where the config lies",
+    type=click.Path(),
+    show_default=True,
 )
 @click.option(
-    "--wallet-rpc-port", default=None, help="The RPC port the wallet service is running on", type=int
+    "--wallet-rpc-port",
+    default=None,
+    help="The RPC port the wallet service is running on",
+    type=int,
 )
 def cli(
     ctx: click.Context,
     tail: str,
-    curry: Tuple[str],
+    curry: Tuple[str, ...],
     solution: str,
     send_to: str,
     amount: int,
@@ -229,15 +266,15 @@ def cli(
     proofs_checker: Optional[str],
     cr_flag: Tuple[str],
     fingerprint: int,
-    signature: Tuple[str],
-    spend: Tuple[str],
+    signature: Tuple[str, ...],
+    spend: Tuple[str, ...],
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
     push: bool,
-    root_path: click.Path,
+    root_path: str,
     wallet_rpc_port: Optional[int],
-):
+) -> None:
     ctx.ensure_object(dict)
 
     asyncio.run(
@@ -266,7 +303,7 @@ def cli(
 
 async def cmd_func(
     tail: str,
-    curry: Tuple[str],
+    curry: Tuple[str, ...],
     solution: str,
     send_to: str,
     amount: int,
@@ -275,17 +312,17 @@ async def cmd_func(
     proofs_checker: Optional[str],
     cr_flag: Tuple[str],
     fingerprint: int,
-    signature: Tuple[str],
-    spend: Tuple[str],
+    signature: Tuple[str, ...],
+    spend: Tuple[str, ...],
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
     push: bool,
-    root_path: click.Path,
+    root_path: str,
     wallet_rpc_port: Optional[int],
 ) -> None:
     tail = parse_program(tail)
-    curried_args = [assemble(arg) for arg in curry]
+    curried_args = [assemble(arg) for arg in curry]  # type: ignore[no-untyped-call]
     solution = parse_program(solution)
     inner_address = decode_puzzle_hash(send_to)
     address = inner_address
@@ -346,7 +383,16 @@ async def cmd_func(
     cat_ph = cat_puzzle.get_tree_hash()
 
     # Get a signed transaction from the wallet
-    signed_tx = await get_signed_tx(wallet_rpc_port, fingerprint, cat_ph, amount, fee, Path(root_path))
+    signed_tx = await get_signed_tx(
+        wallet_rpc_port,
+        fingerprint,
+        cat_ph,
+        uint64(amount),
+        uint64(fee),
+        Path(root_path),
+    )
+    if signed_tx.spend_bundle is None:
+        raise ValueError("Error creating signed transaction")
     eve_coin = list(
         filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
     )[0]
@@ -387,7 +433,9 @@ async def cmd_func(
     if as_bytes:
         final_bundle_dump = bytes(final_bundle).hex()
     else:
-        final_bundle_dump = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
+        final_bundle_dump = json.dumps(
+            final_bundle.to_json_dict(), sort_keys=True, indent=4
+        )
 
     confirmation = push
 
@@ -396,11 +444,13 @@ async def cmd_func(
             "The transaction has been created, would you like to push it to the network? (Y/N)"
         ) in ["y", "Y", "yes", "Yes"]
     if confirmation:
-        response = await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
+        response = await push_tx(
+            wallet_rpc_port, fingerprint, final_bundle, Path(root_path)
+        )
         if "error" in response:
             print(f"Error pushing transaction: {response['error']}")
             return
-        print(f"Successfully pushed the transaction to the network")
+        print("Successfully pushed the transaction to the network")
 
     print(f"Asset ID: {curried_tail.get_tree_hash().hex()}")
     print(f"Eve Coin ID: {eve_coin.name().hex()}")
@@ -408,7 +458,7 @@ async def cmd_func(
         print(f"Spend Bundle: {final_bundle_dump}")
 
 
-def main():
+def main() -> None:
     cli()
 
 
