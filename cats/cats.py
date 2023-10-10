@@ -25,6 +25,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.util.bech32m import decode_puzzle_hash
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.transaction_record import TransactionRecord
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
@@ -62,7 +65,7 @@ async def get_signed_tx(
                 "Error getting wallet client. Make sure wallet is running."
             )
         return await wallet_client.create_signed_transaction(
-            [{"puzzle_hash": ph, "amount": amt}], fee=fee
+            [{"puzzle_hash": ph, "amount": amt}], DEFAULT_TX_CONFIG, fee=fee  # TODO: no default tx config
         )
 
 
@@ -165,6 +168,38 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="The fees for the transaction, in mojos",
 )
 @click.option(
+    "-d",
+    "--authorized-provider",
+    type=str,
+    multiple=True,
+    help=(
+        "A trusted DID that can issue VCs that are allowed to trade the CAT. Specifying this option will make the CAT "
+        "a CR (credential restricted) CAT."
+    ),
+)
+@click.option(
+    "-r",
+    "--proofs-checker",
+    type=str,
+    default=None,
+    show_default=False,
+    help=(
+        "The program that checks the proofs of a VC for a CR-CAT. "
+        "Specifying this option requires a value for --authorized-providers."
+    ),
+)
+@click.option(
+    "-v",
+    "--cr-flag",
+    type=str,
+    multiple=True,
+    help=(
+        "Specify a list of flags to check a VC for in order to authorize this CR-CAT. "
+        "Specifying this option requires a value for --authorized-providers. "
+        "Cannot be used if a custom --proofs-checker is specified."
+    )
+)
+@click.option(
     "-f",
     "--fingerprint",
     type=int,
@@ -227,6 +262,9 @@ def cli(
     send_to: str,
     amount: int,
     fee: int,
+    authorized_provider: Tuple[str],
+    proofs_checker: Optional[str],
+    cr_flag: Tuple[str],
     fingerprint: int,
     signature: Tuple[str, ...],
     spend: Tuple[str, ...],
@@ -247,6 +285,9 @@ def cli(
             send_to,
             amount,
             fee,
+            authorized_provider,
+            proofs_checker,
+            cr_flag,
             fingerprint,
             signature,
             spend,
@@ -267,6 +308,9 @@ async def cmd_func(
     send_to: str,
     amount: int,
     fee: int,
+    authorized_provider: Tuple[str],
+    proofs_checker: Optional[str],
+    cr_flag: Tuple[str],
     fingerprint: int,
     signature: Tuple[str, ...],
     spend: Tuple[str, ...],
@@ -280,7 +324,36 @@ async def cmd_func(
     tail = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]  # type: ignore[no-untyped-call]
     solution = parse_program(solution)
-    address = decode_puzzle_hash(send_to)
+    inner_address = decode_puzzle_hash(send_to)
+    address = inner_address
+
+    # Potentially wrap address in CR layer
+    extra_conditions: List[Program] = []
+    if len(authorized_provider) > 0:
+        ap_bytes = [bytes32(decode_puzzle_hash(ap)) for ap in authorized_provider]
+        proofs_checker: Program
+        if proofs_checker is not None:
+            if len(cr_flag) > 0:
+                print("Cannot specify values for both --proofs-checker and --cr-flag")
+                return
+            proofs_checker = parse_program(proofs_checker)
+        elif len(cr_flag) > 0:
+            proofs_checker = ProofsChecker(list(cr_flag)).as_program()
+        else:
+            print("Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider")
+            return
+        extra_conditions.append(Program.to(
+            [1, inner_address, ap_bytes, proofs_checker]
+        ))
+        address = construct_cr_layer(
+            ap_bytes,
+            proofs_checker,
+            inner_address,  # type: ignore
+        ).get_tree_hash_precalc(inner_address)
+
+    elif proofs_checker is not None or len(cr_flag) > 0:
+        print("Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider")
+        return
 
     aggregated_signature = G2Element()
     for sig in signature:
@@ -302,7 +375,7 @@ async def cmd_func(
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
-        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount, [address]]])
+        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount, [inner_address]], *extra_conditions])
     )
 
     # Wrap the intermediate puzzle in a CAT wrapper
