@@ -1,4 +1,4 @@
-name: Run Test Suite
+name: Run Test Suite Nightly
 
 on:
   workflow_dispatch:
