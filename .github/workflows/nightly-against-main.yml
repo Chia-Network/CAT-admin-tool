@@ -14,8 +14,6 @@ jobs:
     name: All tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
