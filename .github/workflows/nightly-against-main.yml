@@ -1,0 +1,59 @@
+name: Run Test Suite Nightly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 11 * * *"
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: All tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Cache test blocks and plots
+      uses: actions/cache@v3
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
+      id: test-blocks-plots
+      with:
+        path: |
+          ${{ github.workspace }}/.chia/blocks
+          ${{ github.workspace }}/.chia/test-plots
+        key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
+
+    - name: Checkout test blocks and plots
+      if: steps.test-blocks-plots.outputs.cache-hit != 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
+        mkdir "${GITHUB_WORKSPACE}/.chia"
+        mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
+
+    - name: Test code with pytest against chia-blockchain main nightly
+      run: |
+        python3 -m venv venv
+        . ./venv/bin/activate
+        sed -i 's/chia-blockchain.*/chia-blockchain @ git+https:\/\/github.com\/Chia-Network\/chia-blockchain.git@main\",/g' setup.py
+        pip install .[dev]
+        ./venv/bin/pytest tests/ -s -v --durations 0
