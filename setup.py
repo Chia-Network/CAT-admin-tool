@@ -5,8 +5,11 @@ from setuptools import setup, find_packages
 with open("README.md", "rt") as fh:
     long_description = fh.read()
 
+# dependencies = [
+#    "chia-blockchain==2.1.2",
+# ]
 dependencies = [
-    "chia-blockchain==2.1.2",
+    "chia-blockchain @ git+ssh://git@github.com/Chia-Network/chia-blockchain.git",
 ]
 
 dev_dependencies = [
@@ -25,7 +28,7 @@ setup(
         "console_scripts": [
             "cats = cats.cats:main",
             "secure_the_bag = cats.secure_the_bag:main",
-            "unwind_the_bag = cats.unwind_the_bag:main"
+            "unwind_the_bag = cats.unwind_the_bag:main",
         ],
     },
     author_email="m.hauff@chia.net",
