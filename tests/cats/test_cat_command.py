@@ -4,7 +4,7 @@ import contextlib
 import io
 
 import pytest
-from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
+from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
