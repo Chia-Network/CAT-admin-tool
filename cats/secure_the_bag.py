@@ -8,7 +8,7 @@ import click
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -186,7 +186,7 @@ def parent_of_puzzle_hash(
 
     coin = Coin(parent_coin_info, parent.puzzle_hash, parent.amount)
 
-    return CoinSpend(coin, parent.puzzle, Program.to([])), coin.name()
+    return make_spend(coin, parent.puzzle, Program.to([])), coin.name()
 
 
 def read_secure_the_bag_targets(
