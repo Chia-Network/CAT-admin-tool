@@ -4,7 +4,7 @@ import contextlib
 import io
 
 import pytest
-from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
+from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -75,12 +75,20 @@ async def test_cat_mint(
             wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
         )
 
+    # expected_str_value = (
+    #     '{\n    "amount": 250000000000,\n    '
+    #     '"parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000001",\n    '
+    #     '"puzzle_hash": "0x3ecfd2611925541707c96e689bd415f1991f018a5179d0a7072226d81453d377"\n}\n'
+    #     "Name: 9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333\n"
+    # )
+
     expected_str_value = (
         '{\n    "amount": 250000000000,\n    '
-        '"parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000001",\n    '
+        '"parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000002",\n    '
         '"puzzle_hash": "0x3ecfd2611925541707c96e689bd415f1991f018a5179d0a7072226d81453d377"\n}\n'
-        "Name: 9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333\n"
+        "Name: 1ef743aa7bd56cec3a65115eb37b6e2b969377eca8c9099337381471efe26e78\n"
     )
+
     assert f.getvalue() == expected_str_value
     f.truncate(0)
 
@@ -136,7 +144,7 @@ async def test_cat_mint(
         coins={
             Coin(
                 bytes32.from_hexstr(
-                    "9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333"
+                    "1ef743aa7bd56cec3a65115eb37b6e2b969377eca8c9099337381471efe26e78"
                 ),
                 bytes32.from_hexstr(
                     "bebd0c1c65d72e260ff7bef6edc93154568f699c18ced593b585d4a6d5c28ed2"

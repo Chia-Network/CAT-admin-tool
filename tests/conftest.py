@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest_asyncio
 
 from chia.simulator.block_tools import test_constants
-from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
+from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
