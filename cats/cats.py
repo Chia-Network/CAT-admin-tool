@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Union
 
 import click
-from blspy import AugSchemeMPL, G2Element
+from chia_rs import AugSchemeMPL, G2Element
 from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
