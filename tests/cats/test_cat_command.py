@@ -75,13 +75,6 @@ async def test_cat_mint(
             wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
         )
 
-    # expected_str_value = (
-    #     '{\n    "amount": 250000000000,\n    '
-    #     '"parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000001",\n    '
-    #     '"puzzle_hash": "0x3ecfd2611925541707c96e689bd415f1991f018a5179d0a7072226d81453d377"\n}\n'
-    #     "Name: 9563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333\n"
-    # )
-
     expected_str_value = (
         '{\n    "amount": 250000000000,\n    '
         '"parent_coin_info": "0x27ae41e4649b934ca495991b7852b85500000000000000000000000000000002",\n    '
