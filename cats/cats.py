@@ -65,7 +65,9 @@ async def get_signed_tx(
                 "Error getting wallet client. Make sure wallet is running."
             )
         return await wallet_client.create_signed_transaction(
-            [{"puzzle_hash": ph, "amount": amt}], DEFAULT_TX_CONFIG, fee=fee  # TODO: no default tx config
+            [{"puzzle_hash": ph, "amount": amt}],
+            DEFAULT_TX_CONFIG,
+            fee=fee,  # TODO: no default tx config
         )
 
 
@@ -197,7 +199,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
         "Specify a list of flags to check a VC for in order to authorize this CR-CAT. "
         "Specifying this option requires a value for --authorized-providers. "
         "Cannot be used if a custom --proofs-checker is specified."
-    )
+    ),
 )
 @click.option(
     "-f",
@@ -340,11 +342,13 @@ async def cmd_func(
         elif len(cr_flag) > 0:
             proofs_checker = ProofsChecker(list(cr_flag)).as_program()
         else:
-            print("Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider")
+            print(
+                "Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider"
+            )
             return
-        extra_conditions.append(Program.to(
-            [1, inner_address, ap_bytes, proofs_checker]
-        ))
+        extra_conditions.append(
+            Program.to([1, inner_address, ap_bytes, proofs_checker])
+        )
         address = construct_cr_layer(
             ap_bytes,
             proofs_checker,
@@ -352,7 +356,9 @@ async def cmd_func(
         ).get_tree_hash_precalc(inner_address)
 
     elif proofs_checker is not None or len(cr_flag) > 0:
-        print("Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider")
+        print(
+            "Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider"
+        )
         return
 
     aggregated_signature = G2Element()
@@ -375,7 +381,14 @@ async def cmd_func(
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
-        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount, [inner_address]], *extra_conditions])
+        (
+            1,
+            [
+                [51, 0, -113, curried_tail, solution],
+                [51, address, amount, [inner_address]],
+                *extra_conditions,
+            ],
+        )
     )
 
     # Wrap the intermediate puzzle in a CAT wrapper
