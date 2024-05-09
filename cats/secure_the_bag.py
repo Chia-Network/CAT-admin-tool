@@ -38,7 +38,7 @@ def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> 
         return program
     else:
         if "(" in program:  # If it's raw clvm
-            prog = Program.to(assemble(program))  # type: ignore[no-untyped-call]
+            prog = Program.to(assemble(program))
         elif "." not in program:  # If it's a byte string
             prog = Program.from_bytes(hexstr_to_bytes(program))
         else:  # If it's a file
@@ -51,7 +51,7 @@ def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> 
                             compile_clvm_text(filestring, append_include(include))  # type: ignore[no-untyped-call]
                         )
                     else:  # If it's CLVM
-                        prog = Program.to(assemble(filestring))  # type: ignore[no-untyped-call]
+                        prog = Program.to(assemble(filestring))
                 else:  # If it's serialized CLVM
                     prog = Program.from_bytes(hexstr_to_bytes(filestring))
         return prog
@@ -269,7 +269,7 @@ def cli(
     ctx.ensure_object(dict)
 
     tail = parse_program(tail)
-    curried_args = [assemble(arg) for arg in curry]  # type: ignore[no-untyped-call]
+    curried_args = [assemble(arg) for arg in curry]
 
     # Construct the TAIL
     if len(curried_args) > 0:

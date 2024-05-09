@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Union
 
 import click
-from chia_rs import AugSchemeMPL, G2Element
 from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
@@ -25,10 +24,10 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.util.bech32m import decode_puzzle_hash
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
+from chia_rs import AugSchemeMPL, G2Element
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
 
@@ -65,7 +64,9 @@ async def get_signed_tx(
                 "Error getting wallet client. Make sure wallet is running."
             )
         return await wallet_client.create_signed_transaction(
-            [{"puzzle_hash": ph, "amount": amt}], DEFAULT_TX_CONFIG, fee=fee  # TODO: no default tx config
+            [{"puzzle_hash": ph, "amount": amt}],
+            DEFAULT_TX_CONFIG,
+            fee=fee,  # TODO: no default tx config
         )
 
 
@@ -83,7 +84,7 @@ async def push_tx(
             raise ValueError(
                 "Error getting wallet client. Make sure wallet is running."
             )
-        return await wallet_client.push_tx(bundle)  # type: ignore[no-untyped-call]
+        return await wallet_client.push_tx(bundle)
 
 
 # The clvm loaders in this library automatically search for includable files in the directory './include'
@@ -102,7 +103,7 @@ def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> 
         return program
     else:
         if "(" in program:  # If it's raw clvm
-            prog = Program.to(assemble(program))  # type: ignore[no-untyped-call]
+            prog = Program.to(assemble(program))
         elif "." not in program:  # If it's a byte string
             prog = Program.from_bytes(hexstr_to_bytes(program))
         else:  # If it's a file
@@ -115,7 +116,7 @@ def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> 
                             compile_clvm_text(filestring, append_include(include))  # type: ignore[no-untyped-call]
                         )
                     else:  # If it's CLVM
-                        prog = Program.to(assemble(filestring))  # type: ignore[no-untyped-call]
+                        prog = Program.to(assemble(filestring))
                 else:  # If it's serialized CLVM
                     prog = Program.from_bytes(hexstr_to_bytes(filestring))
         return prog
@@ -197,7 +198,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
         "Specify a list of flags to check a VC for in order to authorize this CR-CAT. "
         "Specifying this option requires a value for --authorized-providers. "
         "Cannot be used if a custom --proofs-checker is specified."
-    )
+    ),
 )
 @click.option(
     "-f",
@@ -262,12 +263,12 @@ def cli(
     send_to: str,
     amount: int,
     fee: int,
-    authorized_provider: Tuple[str],
+    authorized_provider: List[str],
     proofs_checker: Optional[str],
-    cr_flag: Tuple[str],
+    cr_flag: List[str],
     fingerprint: int,
-    signature: Tuple[str, ...],
-    spend: Tuple[str, ...],
+    signature: List[str],
+    spend: List[str],
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
@@ -308,12 +309,12 @@ async def cmd_func(
     send_to: str,
     amount: int,
     fee: int,
-    authorized_provider: Tuple[str],
+    authorized_provider: List[str],
     proofs_checker: Optional[str],
-    cr_flag: Tuple[str],
+    cr_flag: List[str],
     fingerprint: int,
-    signature: Tuple[str, ...],
-    spend: Tuple[str, ...],
+    signature: List[str],
+    spend: List[str],
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
@@ -322,7 +323,7 @@ async def cmd_func(
     wallet_rpc_port: Optional[int],
 ) -> None:
     tail = parse_program(tail)
-    curried_args = [assemble(arg) for arg in curry]  # type: ignore[no-untyped-call]
+    curried_args = [assemble(arg) for arg in curry]
     solution = parse_program(solution)
     inner_address = decode_puzzle_hash(send_to)
     address = inner_address
@@ -331,7 +332,7 @@ async def cmd_func(
     extra_conditions: List[Program] = []
     if len(authorized_provider) > 0:
         ap_bytes = [bytes32(decode_puzzle_hash(ap)) for ap in authorized_provider]
-        proofs_checker: Program
+        # proofs_checker: Program
         if proofs_checker is not None:
             if len(cr_flag) > 0:
                 print("Cannot specify values for both --proofs-checker and --cr-flag")
@@ -340,11 +341,13 @@ async def cmd_func(
         elif len(cr_flag) > 0:
             proofs_checker = ProofsChecker(list(cr_flag)).as_program()
         else:
-            print("Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider")
+            print(
+                "Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider"
+            )
             return
-        extra_conditions.append(Program.to(
-            [1, inner_address, ap_bytes, proofs_checker]
-        ))
+        extra_conditions.append(
+            Program.to([1, inner_address, ap_bytes, proofs_checker])
+        )
         address = construct_cr_layer(
             ap_bytes,
             proofs_checker,
@@ -352,7 +355,9 @@ async def cmd_func(
         ).get_tree_hash_precalc(inner_address)
 
     elif proofs_checker is not None or len(cr_flag) > 0:
-        print("Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider")
+        print(
+            "Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider"
+        )
         return
 
     aggregated_signature = G2Element()
@@ -375,7 +380,14 @@ async def cmd_func(
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
-        (1, [[51, 0, -113, curried_tail, solution], [51, address, amount, [inner_address]], *extra_conditions])
+        (
+            1,
+            [
+                [51, 0, -113, curried_tail, solution],
+                [51, address, amount, [inner_address]],
+                *extra_conditions,
+            ],
+        )
     )
 
     # Wrap the intermediate puzzle in a CAT wrapper
