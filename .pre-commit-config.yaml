@@ -16,7 +16,7 @@ repos:
     hooks:
     -   id: check-yaml
     -   id: end-of-file-fixer
-        exclude: ".*?(.hex|.clvm|.clib)"
+        exclude: ".*?(.hex|.clsp|.clvm|.clib)"
     -   id: trailing-whitespace
     -   id: check-merge-conflict
     -   id: check-ast
