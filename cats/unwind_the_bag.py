@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Coroutine, Dict, List, Optional
 
 import click
-from chia_rs import G2Element
 from chia.cmds.cmds_util import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -28,6 +27,8 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia_rs import G2Element
 
 from cats.secure_the_bag import (
     TargetCoin,
@@ -296,7 +297,9 @@ async def app(
 
             if unwind_fee > 0:
                 fee_coins = await wallet_client.select_coins(
-                    amount=unwind_fee, wallet_id=wallet_id
+                    amount=unwind_fee,
+                    wallet_id=wallet_id,
+                    coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG,
                 )
                 change_amount = sum([c.amount for c in fee_coins]) - unwind_fee
                 change_address = await wallet_client.get_next_address(
@@ -314,7 +317,8 @@ async def app(
                     [{"amount": change_amount, "puzzle_hash": change_ph}],
                     coins=fee_coins,
                     fee=uint64(unwind_fee),
-                    coin_announcements=cat_announcements,
+                    extra_conditions=(*cat_announcements,),
+                    tx_config=DEFAULT_TX_CONFIG,
                 )
 
                 if fees_tx.spend_bundle is None:
@@ -324,12 +328,12 @@ async def app(
                     SpendBundle(
                         cat_spend.coin_spends + fees_tx.spend_bundle.coin_spends,
                         fees_tx.spend_bundle.aggregated_signature,
-                    )  # type: ignore[no-untyped-call]
+                    )
                 )
             else:
                 await wallet_client.push_tx(
                     SpendBundle(cat_spend.coin_spends, cat_spend.aggregated_signature)
-                )  # type: ignore[no-untyped-call]
+                )
 
             print("Transaction pushed to full node")
 
@@ -402,7 +406,9 @@ async def app(
                         spend_bundle_fee = len(bundle_spends) * unwind_fee
 
                         fee_coins = await wallet_client.select_coins(
-                            amount=spend_bundle_fee, wallet_id=wallet_id
+                            amount=spend_bundle_fee,
+                            wallet_id=wallet_id,
+                            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG,
                         )
                         change_amount = (
                             sum([c.amount for c in fee_coins]) - spend_bundle_fee
@@ -424,7 +430,8 @@ async def app(
                             [{"amount": change_amount, "puzzle_hash": change_ph}],
                             coins=fee_coins,
                             fee=uint64(spend_bundle_fee),
-                            coin_announcements=cat_announcements,
+                            extra_conditions=(*cat_announcements,),
+                            tx_config=DEFAULT_TX_CONFIG,
                         )
                         if fees_tx.spend_bundle is None:
                             raise Exception("No spend bundle created")
@@ -433,12 +440,12 @@ async def app(
                             SpendBundle(
                                 bundle_spends + fees_tx.spend_bundle.coin_spends,
                                 fees_tx.spend_bundle.aggregated_signature,
-                            )  # type: ignore[no-untyped-call]
+                            )
                         )
                     else:
                         await wallet_client.push_tx(
                             SpendBundle(bundle_spends, cat_spend.aggregated_signature)
-                        )  # type: ignore[no-untyped-call]
+                        )
 
                     print(
                         f"Transaction containing {len(bundle_spends)} coin spends "

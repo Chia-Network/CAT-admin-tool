@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from __future__ import annotations
+
+from setuptools import find_packages, setup
 
 with open("README.md", "rt") as fh:
     long_description = fh.read()
@@ -10,10 +12,13 @@ dependencies = [
 ]
 
 dev_dependencies = [
-    "black==23.7.0",
+    "black==24.4.2",
     "pytest",
     "pytest-asyncio",
     "pytest-env",
+    "pre-commit==3.5.0; python_version < '3.9'",
+    "pre-commit==3.7.0; python_version >= '3.9'",
+    "mypy==1.10.0",
 ]
 
 setup(
@@ -25,7 +30,7 @@ setup(
         "console_scripts": [
             "cats = cats.cats:main",
             "secure_the_bag = cats.secure_the_bag:main",
-            "unwind_the_bag = cats.unwind_the_bag:main"
+            "unwind_the_bag = cats.unwind_the_bag:main",
         ],
     },
     author_email="m.hauff@chia.net",

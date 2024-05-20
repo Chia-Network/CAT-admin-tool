@@ -34,6 +34,7 @@ async def test_cat_mint(
         full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
     }
 
+    assert full_node_server._port is not None
     await wallet_node_0.server.start_client(
         PeerInfo("127.0.0.1", uint16(full_node_server._port)), None
     )
@@ -61,12 +62,12 @@ async def test_cat_mint(
             self_address,
             amount,
             fee,
-            tuple(),
+            [],
             None,
-            tuple(),
+            [],
             fingerprint,
-            signature=tuple(),
-            spend=tuple(),
+            signature=[],
+            spend=[],
             as_bytes=False,
             select_coin=True,
             quiet=False,
@@ -93,12 +94,12 @@ async def test_cat_mint(
             self_address,
             amount,
             fee,
-            tuple(),
+            [],
             None,
-            tuple(),
+            [],
             fingerprint,
-            signature=tuple(),
-            spend=tuple(),
+            signature=[],
+            spend=[],
             as_bytes=True,
             select_coin=False,
             quiet=True,
@@ -119,12 +120,12 @@ async def test_cat_mint(
             self_address,
             amount,
             fee,
-            tuple(),
+            [],
             None,
-            tuple(),
+            [],
             fingerprint,
-            signature=tuple(),
-            spend=tuple(),
+            signature=[],
+            spend=[],
             as_bytes=True,
             select_coin=False,
             quiet=True,
