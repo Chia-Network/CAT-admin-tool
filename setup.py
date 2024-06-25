@@ -18,7 +18,7 @@ dev_dependencies = [
     "pytest-env",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.7.1; python_version >= '3.9'",
-    "mypy==1.10.0",
+    "mypy==1.10.1",
 ]
 
 setup(
