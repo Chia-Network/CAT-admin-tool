@@ -322,9 +322,9 @@ async def cmd_func(
     root_path: str,
     wallet_rpc_port: Optional[int],
 ) -> None:
-    tail = parse_program(tail)
+    parsed_tail: Program = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
-    solution = parse_program(solution)
+    parsed_solution: Program = parse_program(solution)
     inner_address = decode_puzzle_hash(send_to)
     address = inner_address
 
@@ -337,20 +337,20 @@ async def cmd_func(
             if len(cr_flag) > 0:
                 print("Cannot specify values for both --proofs-checker and --cr-flag")
                 return
-            proofs_checker = parse_program(proofs_checker)
+            parsed_proofs_checker = parse_program(proofs_checker)
         elif len(cr_flag) > 0:
-            proofs_checker = ProofsChecker(list(cr_flag)).as_program()
+            parsed_proofs_checker = ProofsChecker(list(cr_flag)).as_program()
         else:
             print(
                 "Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider"
             )
             return
         extra_conditions.append(
-            Program.to([1, inner_address, ap_bytes, proofs_checker])
+            Program.to([1, inner_address, ap_bytes, parsed_proofs_checker])
         )
         address = construct_cr_layer(
             ap_bytes,
-            proofs_checker,
+            parsed_proofs_checker,
             inner_address,  # type: ignore
         ).get_tree_hash_precalc(inner_address)
 
@@ -374,16 +374,16 @@ async def cmd_func(
 
     # Construct the TAIL
     if len(curried_args) > 0:
-        curried_tail = tail.curry(*curried_args)
+        curried_tail = parsed_tail.curry(*curried_args)
     else:
-        curried_tail = tail
+        curried_tail = parsed_tail
 
     # Construct the intermediate puzzle
     p2_puzzle = Program.to(
         (
             1,
             [
-                [51, 0, -113, curried_tail, solution],
+                [51, 0, -113, curried_tail, parsed_solution],
                 [51, address, amount, [inner_address]],
                 *extra_conditions,
             ],
@@ -427,7 +427,7 @@ async def cmd_func(
         curried_tail.get_tree_hash(),
         p2_puzzle,
         Program.to([]),
-        limitations_solution=solution,
+        limitations_solution=parsed_solution,
         limitations_program_reveal=curried_tail,
     )
     eve_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_eve])

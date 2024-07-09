@@ -268,14 +268,14 @@ def cli(
 ) -> None:
     ctx.ensure_object(dict)
 
-    tail = parse_program(tail)
+    parsed_tail: Program = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
 
     # Construct the TAIL
     if len(curried_args) > 0:
-        curried_tail = tail.curry(*curried_args)
+        curried_tail = parsed_tail.curry(*curried_args)
     else:
-        curried_tail = tail
+        curried_tail = parsed_tail
 
     targets = read_secure_the_bag_targets(secure_the_bag_targets_path, amount)
     root_puzzle_hash, _ = secure_the_bag(targets, leaf_width, None)
