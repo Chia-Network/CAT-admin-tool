@@ -42,7 +42,11 @@ async def test_cat_mint(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
     self_address = encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "xch")
-    fingerprint = wallet_0.wallet_state_manager.private_key.get_g1().get_fingerprint()
+    fingerprint = (
+        wallet_0.wallet_state_manager.get_master_private_key()
+        .get_g1()
+        .get_fingerprint()
+    )
     root_path = str(wallet_service_0.root_path)
 
     # Issuance parameters
