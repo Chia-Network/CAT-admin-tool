@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 dev_dependencies = [
-    "black==24.4.2",
+    "black==24.8.0",
     "pytest",
     "pytest-asyncio",
     "pytest-env",
