@@ -12,7 +12,6 @@ from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
@@ -27,6 +26,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import AugSchemeMPL, G2Element
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
@@ -63,17 +63,18 @@ async def get_signed_tx(
             raise ValueError(
                 "Error getting wallet client. Make sure wallet is running."
             )
-        return await wallet_client.create_signed_transaction(
+        signed_tx = await wallet_client.create_signed_transactions(
             [{"puzzle_hash": ph, "amount": amt}],
             DEFAULT_TX_CONFIG,
             fee=fee,  # TODO: no default tx config
         )
+        return signed_tx.signed_tx
 
 
 async def push_tx(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    bundle: SpendBundle,
+    bundle: WalletSpendBundle,
     root_path: Path,
 ) -> Any:
     async with get_context_manager(
@@ -366,10 +367,10 @@ async def cmd_func(
             [aggregated_signature, G2Element.from_bytes(hexstr_to_bytes(sig))]
         )
 
-    aggregated_spend = SpendBundle([], G2Element())
+    aggregated_spend = WalletSpendBundle([], G2Element())
     for bundle in spend:
-        aggregated_spend = SpendBundle.aggregate(
-            [aggregated_spend, SpendBundle.from_bytes(hexstr_to_bytes(bundle))]
+        aggregated_spend = WalletSpendBundle.aggregate(
+            [aggregated_spend, WalletSpendBundle.from_bytes(hexstr_to_bytes(bundle))]
         )
 
     # Construct the TAIL
@@ -433,12 +434,12 @@ async def cmd_func(
     eve_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_eve])
 
     # Aggregate everything together
-    final_bundle = SpendBundle.aggregate(
+    final_bundle = WalletSpendBundle.aggregate(
         [
             signed_tx.spend_bundle,
             eve_spend,
             aggregated_spend,
-            SpendBundle([], aggregated_signature),
+            WalletSpendBundle([], aggregated_signature),
         ]
     )
 

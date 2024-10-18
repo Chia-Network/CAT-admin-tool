@@ -28,8 +28,8 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: macos-12
-              arm: [macos, arm64]
+              intel: macos-13
+              arm: macos-13-arm64
           - name: Windows
             matrix: windows
             runs-on:
@@ -40,7 +40,6 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: "3.8"
           - major_dot_minor: "3.9"
           - major_dot_minor: "3.10"
           - major_dot_minor: "3.11"
