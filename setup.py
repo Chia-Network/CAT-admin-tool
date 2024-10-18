@@ -8,7 +8,7 @@ with open("README.md", "rt") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chia-blockchain==2.4.2",
+    "chia-blockchain==2.4.4",
 ]
 
 dev_dependencies = [
@@ -41,8 +41,9 @@ setup(
     description="Tools to administer issuance and redemption of a Chia Asset Token or CAT",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: Security :: Cryptography",
     ],

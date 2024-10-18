@@ -9,15 +9,15 @@ from typing import Any, Coroutine, Dict, List, Optional
 import click
 from chia.cmds.cmds_util import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -28,6 +28,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import G2Element
 
 from cats.secure_the_bag import (
@@ -157,7 +158,7 @@ async def get_unwind(
 
 async def unwind_coin_spend(
     full_node_client: FullNodeRpcClient, tail_hash_bytes: bytes32, coin_spend: CoinSpend
-) -> SpendBundle:
+) -> WalletSpendBundle:
     # Wait for unspent coin to exist before trying to spend it
     await wait_for_unspent_coin(full_node_client, coin_spend.coin.name())
 
@@ -267,7 +268,7 @@ async def app(
     )
     if fingerprint is not None:
         print("Setting fingerprint: {}".format(fingerprint))
-        await wallet_client.log_in(fingerprint)
+        await wallet_client.log_in(LogIn(uint32(fingerprint)))
 
     targets = read_secure_the_bag_targets(secure_the_bag_targets_path, None)
     _, parent_puzzle_lookup = secure_the_bag(targets, leaf_width, tail_hash_bytes)
@@ -313,7 +314,7 @@ async def app(
                     cat_announcements.append(Announcement(coin_spend.coin.name(), b"$"))
 
                 # Create signed coin spends and change for fees
-                fees_tx = await wallet_client.create_signed_transaction(
+                fees_tx = await wallet_client.create_signed_transactions(
                     [{"amount": change_amount, "puzzle_hash": change_ph}],
                     coins=fee_coins,
                     fee=uint64(unwind_fee),
@@ -321,18 +322,21 @@ async def app(
                     tx_config=DEFAULT_TX_CONFIG,
                 )
 
-                if fees_tx.spend_bundle is None:
+                if fees_tx.signed_tx.spend_bundle is None:
                     raise Exception("No spend bundle created")
 
                 await wallet_client.push_tx(
-                    SpendBundle(
-                        cat_spend.coin_spends + fees_tx.spend_bundle.coin_spends,
-                        fees_tx.spend_bundle.aggregated_signature,
+                    WalletSpendBundle(
+                        cat_spend.coin_spends
+                        + fees_tx.signed_tx.spend_bundle.coin_spends,
+                        fees_tx.signed_tx.spend_bundle.aggregated_signature,
                     )
                 )
             else:
                 await wallet_client.push_tx(
-                    SpendBundle(cat_spend.coin_spends, cat_spend.aggregated_signature)
+                    WalletSpendBundle(
+                        cat_spend.coin_spends, cat_spend.aggregated_signature
+                    )
                 )
 
             print("Transaction pushed to full node")
@@ -426,25 +430,28 @@ async def app(
                             )
 
                         # Create signed coin spends and change for fees
-                        fees_tx = await wallet_client.create_signed_transaction(
+                        fees_tx = await wallet_client.create_signed_transactions(
                             [{"amount": change_amount, "puzzle_hash": change_ph}],
                             coins=fee_coins,
                             fee=uint64(spend_bundle_fee),
                             extra_conditions=(*cat_announcements,),
                             tx_config=DEFAULT_TX_CONFIG,
                         )
-                        if fees_tx.spend_bundle is None:
+                        if fees_tx.signed_tx.spend_bundle is None:
                             raise Exception("No spend bundle created")
 
                         await wallet_client.push_tx(
-                            SpendBundle(
-                                bundle_spends + fees_tx.spend_bundle.coin_spends,
-                                fees_tx.spend_bundle.aggregated_signature,
+                            WalletSpendBundle(
+                                bundle_spends
+                                + fees_tx.signed_tx.spend_bundle.coin_spends,
+                                fees_tx.signed_tx.spend_bundle.aggregated_signature,
                             )
                         )
                     else:
                         await wallet_client.push_tx(
-                            SpendBundle(bundle_spends, cat_spend.aggregated_signature)
+                            WalletSpendBundle(
+                                bundle_spends, cat_spend.aggregated_signature
+                            )
                         )
 
                     print(
