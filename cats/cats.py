@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import click
 from chia.cmds.cmds_util import get_wallet_client
@@ -36,14 +37,10 @@ from clvm_tools.clvmc import compile_clvm_text
 @asynccontextmanager
 async def get_context_manager(
     wallet_rpc_port: Optional[int], fingerprint: int, root_path: Path
-) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
+) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
     config = load_config(root_path, "config.yaml")
-    _wallet_rpc_port = (
-        config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
-    )
-    async with get_wallet_client(
-        _wallet_rpc_port, root_path=root_path, fingerprint=fingerprint
-    ) as args:
+    wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
+    async with get_wallet_client(wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
         yield args
 
 
@@ -55,14 +52,10 @@ async def get_signed_tx(
     fee: uint64,
     root_path: Path,
 ) -> TransactionRecord:
-    async with get_context_manager(
-        wallet_rpc_port, fingerprint, root_path
-    ) as client_etc:
+    async with get_context_manager(wallet_rpc_port, fingerprint, root_path) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
-            raise ValueError(
-                "Error getting wallet client. Make sure wallet is running."
-            )
+            raise ValueError("Error getting wallet client. Make sure wallet is running.")
         signed_tx = await wallet_client.create_signed_transactions(
             [{"puzzle_hash": ph, "amount": amt}],
             DEFAULT_TX_CONFIG,
@@ -77,19 +70,15 @@ async def push_tx(
     bundle: WalletSpendBundle,
     root_path: Path,
 ) -> Any:
-    async with get_context_manager(
-        wallet_rpc_port, fingerprint, root_path
-    ) as client_etc:
+    async with get_context_manager(wallet_rpc_port, fingerprint, root_path) as client_etc:
         wallet_client, _, _ = client_etc
         if wallet_client is None:
-            raise ValueError(
-                "Error getting wallet client. Make sure wallet is running."
-            )
+            raise ValueError("Error getting wallet client. Make sure wallet is running.")
         return await wallet_client.push_tx(bundle)
 
 
 # The clvm loaders in this library automatically search for includable files in the directory './include'
-def append_include(search_paths: Iterable[str]) -> List[str]:
+def append_include(search_paths: Iterable[str]) -> list[str]:
     if search_paths:
         search_list = list(search_paths)
         search_list.append("./include")
@@ -108,7 +97,7 @@ def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> 
         elif "." not in program:  # If it's a byte string
             prog = Program.from_bytes(hexstr_to_bytes(program))
         else:  # If it's a file
-            with open(program, "r") as file:
+            with open(program) as file:
                 filestring: str = file.read()
                 if "(" in filestring:  # If it's not compiled
                     # TODO: This should probably be more robust
@@ -259,17 +248,17 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 def cli(
     ctx: click.Context,
     tail: str,
-    curry: Tuple[str, ...],
+    curry: tuple[str, ...],
     solution: str,
     send_to: str,
     amount: int,
     fee: int,
-    authorized_provider: List[str],
+    authorized_provider: list[str],
     proofs_checker: Optional[str],
-    cr_flag: List[str],
+    cr_flag: list[str],
     fingerprint: int,
-    signature: List[str],
-    spend: List[str],
+    signature: list[str],
+    spend: list[str],
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
@@ -305,17 +294,17 @@ def cli(
 
 async def cmd_func(
     tail: str,
-    curry: Tuple[str, ...],
+    curry: tuple[str, ...],
     solution: str,
     send_to: str,
     amount: int,
     fee: int,
-    authorized_provider: List[str],
+    authorized_provider: list[str],
     proofs_checker: Optional[str],
-    cr_flag: List[str],
+    cr_flag: list[str],
     fingerprint: int,
-    signature: List[str],
-    spend: List[str],
+    signature: list[str],
+    spend: list[str],
     as_bytes: bool,
     select_coin: bool,
     quiet: bool,
@@ -330,7 +319,7 @@ async def cmd_func(
     address = inner_address
 
     # Potentially wrap address in CR layer
-    extra_conditions: List[Program] = []
+    extra_conditions: list[Program] = []
     if len(authorized_provider) > 0:
         ap_bytes = [bytes32(decode_puzzle_hash(ap)) for ap in authorized_provider]
         # proofs_checker: Program
@@ -342,13 +331,9 @@ async def cmd_func(
         elif len(cr_flag) > 0:
             parsed_proofs_checker = ProofsChecker(list(cr_flag)).as_program()
         else:
-            print(
-                "Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider"
-            )
+            print("Must specify either --proofs-checker or --cr-flag if specifying --authorized-provider")
             return
-        extra_conditions.append(
-            Program.to([1, inner_address, ap_bytes, parsed_proofs_checker])
-        )
+        extra_conditions.append(Program.to([1, inner_address, ap_bytes, parsed_proofs_checker]))
         address = construct_cr_layer(
             ap_bytes,
             parsed_proofs_checker,
@@ -356,9 +341,7 @@ async def cmd_func(
         ).get_tree_hash_precalc(inner_address)
 
     elif proofs_checker is not None or len(cr_flag) > 0:
-        print(
-            "Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider"
-        )
+        print("Cannot specify --proofs-checker or --cr-flag without values for --authorized-provider")
         return
 
     aggregated_signature = G2Element()
@@ -406,18 +389,16 @@ async def cmd_func(
     )
     if signed_tx.spend_bundle is None:
         raise ValueError("Error creating signed transaction")
-    eve_coin = list(
-        filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions())
-    )[0]
+    eve_coin = next(filter(lambda c: c.puzzle_hash == cat_ph, signed_tx.spend_bundle.additions()))
 
     # This is where we exit if we're only looking for the selected coin
     if select_coin:
-        primary_coin = list(
+        primary_coin = next(
             filter(
                 lambda c: c.name() == eve_coin.parent_coin_info,
                 signed_tx.spend_bundle.removals(),
             )
-        )[0]
+        )
         print(json.dumps(primary_coin.to_json_dict(), sort_keys=True, indent=4))
         print(f"Name: {primary_coin.name().hex()}")
         return
@@ -446,20 +427,19 @@ async def cmd_func(
     if as_bytes:
         final_bundle_dump = bytes(final_bundle).hex()
     else:
-        final_bundle_dump = json.dumps(
-            final_bundle.to_json_dict(), sort_keys=True, indent=4
-        )
+        final_bundle_dump = json.dumps(final_bundle.to_json_dict(), sort_keys=True, indent=4)
 
     confirmation = push
 
     if not quiet:
-        confirmation = input(
-            "The transaction has been created, would you like to push it to the network? (Y/N)"
-        ) in ["y", "Y", "yes", "Yes"]
+        confirmation = input("The transaction has been created, would you like to push it to the network? (Y/N)") in {
+            "y",
+            "Y",
+            "yes",
+            "Yes",
+        }
     if confirmation:
-        response = await push_tx(
-            wallet_rpc_port, fingerprint, final_bundle, Path(root_path)
-        )
+        response = await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
         if "error" in response:
             print(f"Error pushing transaction: {response['error']}")
             return
