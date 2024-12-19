@@ -323,7 +323,7 @@ async def app(
 
         batched_targets = batch_the_bag(targets, leaf_width)
 
-        # dictionary of spends at each level of the tree so they can be batched
+        # Dictionary of spends at each level of the tree so they can be batched
         # based on parents that have already been spent
         level_coin_spends: dict[int, dict[str, CoinSpend]] = defaultdict(dict)
         max_depth = 0
