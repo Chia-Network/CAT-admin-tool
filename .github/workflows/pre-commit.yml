@@ -77,5 +77,5 @@ jobs:
 
       - shell: bash
         run: |
-          pip install --extra-index https://pypi.chia.net/simple/ --editable .[dev]
+          python -m pip install --extra-index https://pypi.chia.net/simple/ --editable .[dev]
           pre-commit run --all-files --verbose
