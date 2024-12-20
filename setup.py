@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from setuptools import find_packages, setup
 
-with open("README.md", "rt") as fh:
+with open("README.md") as fh:
     long_description = fh.read()
 
 dependencies = [
@@ -12,18 +12,16 @@ dependencies = [
 ]
 
 dev_dependencies = [
-    "black==24.10.0",
     "pytest",
     "pytest-asyncio",
     "pytest-env",
-    "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==4.0.1; python_version >= '3.9'",
     "mypy==1.13.0",
+    "ruff>=0.8.1",
 ]
 
 setup(
     name="CAT_admin_tool",
-    version="0.0.1",
     author="Quexington",
     packages=find_packages(exclude=("tests",)),
     entry_points={
@@ -37,13 +35,14 @@ setup(
     setup_requires=["setuptools_scm"],
     install_requires=dependencies,
     url="https://github.com/Chia-Network",
-    license="https://opensource.org/licenses/Apache-2.0",
+    license="Apache-2.0",
     description="Tools to administer issuance and redemption of a Chia Asset Token or CAT",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: Security :: Cryptography",
     ],

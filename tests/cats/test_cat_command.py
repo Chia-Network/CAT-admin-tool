@@ -20,7 +20,7 @@ async def test_cat_mint(
 ) -> None:
     # Wallet environment setup
     num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
+    full_nodes, wallets, _bt = one_wallet_and_one_simulator_services
     full_node_api = full_nodes[0]._api
     full_node_server = full_node_api.full_node.server
     wallet_service_0 = wallets[0]
@@ -35,18 +35,12 @@ async def test_cat_mint(
     }
 
     assert full_node_server._port is not None
-    await wallet_node_0.server.start_client(
-        PeerInfo("127.0.0.1", uint16(full_node_server._port)), None
-    )
+    await wallet_node_0.server.start_client(PeerInfo("127.0.0.1", uint16(full_node_server._port)), None)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
     self_address = encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "xch")
-    fingerprint = (
-        wallet_0.wallet_state_manager.get_master_private_key()
-        .get_g1()
-        .get_fingerprint()
-    )
+    fingerprint = wallet_0.wallet_state_manager.get_master_private_key().get_g1().get_fingerprint()
     root_path = str(wallet_service_0.root_path)
 
     # Issuance parameters
@@ -141,12 +135,8 @@ async def test_cat_mint(
     await full_node_api.process_coin_spends(
         coins={
             Coin(
-                bytes32.from_hexstr(
-                    "1ef743aa7bd56cec3a65115eb37b6e2b969377eca8c9099337381471efe26e78"
-                ),
-                bytes32.from_hexstr(
-                    "bebd0c1c65d72e260ff7bef6edc93154568f699c18ced593b585d4a6d5c28ed2"
-                ),
+                bytes32.from_hexstr("1ef743aa7bd56cec3a65115eb37b6e2b969377eca8c9099337381471efe26e78"),
+                bytes32.from_hexstr("bebd0c1c65d72e260ff7bef6edc93154568f699c18ced593b585d4a6d5c28ed2"),
                 uint64(13),
             )
         }
