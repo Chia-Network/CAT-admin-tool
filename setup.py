@@ -16,7 +16,7 @@ dev_dependencies = [
     "pytest-asyncio",
     "pytest-env",
     "pre-commit==4.0.1; python_version >= '3.9'",
-    "mypy==1.13.0",
+    "mypy==1.14.0",
     "ruff>=0.8.1",
 ]
 
