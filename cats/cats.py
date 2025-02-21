@@ -440,10 +440,12 @@ async def cmd_func(
             "Yes",
         }
     if confirmation:
-        response = await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
-        if "error" in response:
-            print(f"Error pushing transaction: {response['error']}")
+        try:
+            await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
+        except Exception as e:
+            print(f"Error pushing transaction: {e}")
             return
+
         print("Successfully pushed the transaction to the network")
 
     print(f"Asset ID: {curried_tail.get_tree_hash().hex()}")
