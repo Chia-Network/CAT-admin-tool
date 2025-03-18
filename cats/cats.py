@@ -10,6 +10,7 @@ from typing import Any, Optional, Union
 
 import click
 from chia.cmds.cmds_util import get_wallet_client
+from chia.rpc.wallet_request_types import PushTX
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -40,7 +41,7 @@ async def get_context_manager(
 ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
     config = load_config(root_path, "config.yaml")
     wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
-    async with get_wallet_client(wallet_rpc_port, root_path=root_path, fingerprint=fingerprint) as args:
+    async with get_wallet_client(root_path=root_path, wallet_rpc_port=wallet_rpc_port, fingerprint=fingerprint) as args:
         yield args
 
 
@@ -74,7 +75,7 @@ async def push_tx(
         wallet_client, _, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
-        return await wallet_client.push_tx(bundle)
+        return await wallet_client.push_tx(PushTX(bundle))
 
 
 # The clvm loaders in this library automatically search for includable files in the directory './include'
@@ -439,10 +440,12 @@ async def cmd_func(
             "Yes",
         }
     if confirmation:
-        response = await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
-        if "error" in response:
-            print(f"Error pushing transaction: {response['error']}")
+        try:
+            await push_tx(wallet_rpc_port, fingerprint, final_bundle, Path(root_path))
+        except Exception as e:
+            print(f"Error pushing transaction: {e}")
             return
+
         print("Successfully pushed the transaction to the network")
 
     print(f"Asset ID: {curried_tail.get_tree_hash().hex()}")
