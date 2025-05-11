@@ -13,12 +13,10 @@ from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_request_types import PushTX
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -30,6 +28,8 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import AugSchemeMPL, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
 

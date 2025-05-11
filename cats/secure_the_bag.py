@@ -8,13 +8,13 @@ from typing import Any, Union
 import click
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import assemble
 from clvm_tools.clvmc import compile_clvm_text
 

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
 from cats.secure_the_bag import (

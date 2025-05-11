@@ -6,10 +6,10 @@ import io
 import pytest
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint64
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint64
 
 from cats.cats import cmd_func
 
