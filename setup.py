@@ -8,12 +8,13 @@ with open("README.md") as fh:
     long_description = fh.read()
 
 dependencies = [
-    "chia-blockchain==2.5.1",
+    "chia-rs==0.21.2",
+    "chia-blockchain==2.5.3",
 ]
 
 dev_dependencies = [
     "pytest",
-    "pytest-asyncio",
+    "pytest-asyncio>=0.26.0",
     "pytest-env",
     "pre-commit==4.1.0; python_version >= '3.9'",
     "mypy==1.15.0",
