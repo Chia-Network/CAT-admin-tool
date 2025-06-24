@@ -14,11 +14,9 @@ from chia.rpc.wallet_request_types import LogIn, PushTX
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -31,6 +29,8 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from cats.secure_the_bag import (
     TargetCoin,
