@@ -12,13 +12,10 @@ from chia.cmds.cmds_util import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_request_types import LogIn, PushTX
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -26,11 +23,14 @@ from chia.wallet.cat_wallet.cat_utils import (
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.conditions import AssertAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from cats.secure_the_bag import (
     TargetCoin,
@@ -286,9 +286,15 @@ async def app(
                 change_ph = decode_puzzle_hash(change_address)
 
                 # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
-                cat_announcements: list[Announcement] = []
+                cat_announcements: list[AssertAnnouncement] = []
                 for coin_spend in cat_spend.coin_spends:
-                    cat_announcements.append(Announcement(coin_spend.coin.name(), b"$"))
+                    cat_announcements.append(
+                        AssertAnnouncement(
+                            coin_not_puzzle=True,
+                            asserted_origin_id=coin_spend.coin.name(),
+                            asserted_msg=b"$",
+                        )
+                    )
 
                 # Create signed coin spends and change for fees
                 fees_tx = await wallet_client.create_signed_transactions(
@@ -394,7 +400,13 @@ async def app(
                         # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
                         cat_announcements = []
                         for coin_spend in bundle_spends:
-                            cat_announcements.append(Announcement(coin_spend.coin.name(), b"$"))
+                            cat_announcements.append(
+                                AssertAnnouncement(
+                                    coin_not_puzzle=True,
+                                    asserted_origin_id=coin_spend.coin.name(),
+                                    asserted_msg=b"$",
+                                )
+                            )
 
                         # Create signed coin spends and change for fees
                         fees_tx = await wallet_client.create_signed_transactions(
