@@ -49,6 +49,7 @@ ignore = [
 
     # Flake8 async
     # Should probably fix these
+    "ASYNC250", # blocking-input-call-in-async-function
     "ASYNC230", # blocking-open-call-in-async-function
     # Should probably fix these after dealing with shielding for anyio
     "ASYNC109", # async-function-with-timeout
@@ -64,6 +65,11 @@ ignore = [
     "RUF009", # function-call-in-dataclass-default-argument
     # Should probably fix this
     "RUF029",
+
+    # TODO: Remove these
+    "UP045",
+    "UP007",
+    "UP035"
 ]
 
 
