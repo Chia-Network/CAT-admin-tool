@@ -10,8 +10,6 @@ from typing import Any, Optional, Union
 
 import click
 from chia.cmds.cmds_util import get_wallet_client
-from chia.rpc.wallet_request_types import PushTX
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -26,6 +24,8 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
+from chia.wallet.wallet_request_types import PushTX
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import AugSchemeMPL, G2Element
 from chia_rs.sized_bytes import bytes32

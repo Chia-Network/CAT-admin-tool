@@ -5,6 +5,7 @@ import io
 
 import pytest
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
@@ -20,7 +21,7 @@ async def test_cat_mint(
 ) -> None:
     # Wallet environment setup
     num_blocks = 1
-    full_nodes, wallets, _bt = one_wallet_and_one_simulator_services
+    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
     full_node_api = full_nodes[0]._api
     full_node_server = full_node_api.full_node.server
     wallet_service_0 = wallets[0]
@@ -39,7 +40,9 @@ async def test_cat_mint(
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
-    self_address = encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "xch")
+    wt: WalletTool = bt.get_pool_wallet_tool()
+
+    self_address = encode_puzzle_hash(wt.get_new_puzzlehash(), "xch")
     fingerprint = wallet_0.wallet_state_manager.get_master_private_key().get_g1().get_fingerprint()
     root_path = str(wallet_service_0.root_path)
 
