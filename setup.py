@@ -15,7 +15,7 @@ dev_dependencies = [
     "pytest",
     "pytest-asyncio>=0.26.0",
     "pytest-env",
-    "pre-commit==4.3.0; python_version >= '3.9'",
+    "pre-commit==4.3.0; python_version >= '3.10'",
     "mypy==1.18.2",
     "types-setuptools",
     "ruff==0.12.11",
@@ -40,7 +40,6 @@ setup(
     description="Tools to administer issuance and redemption of a Chia Asset Token or CAT",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
