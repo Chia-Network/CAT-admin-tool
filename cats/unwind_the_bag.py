@@ -9,11 +9,8 @@ from typing import Any, Optional
 
 import click
 from chia.cmds.cmds_util import get_wallet
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.wallet_request_types import LogIn, PushTX
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpend
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
 from chia.wallet.cat_wallet.cat_utils import (
@@ -27,8 +24,10 @@ from chia.wallet.conditions import AssertAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import LogIn, PushTX
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia_rs import G2Element
+from chia_rs import CoinSpend, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -153,7 +152,7 @@ async def unwind_coin_spend(
     # Wait for unspent coin to exist before trying to spend it
     await wait_for_unspent_coin(full_node_client, coin_spend.coin.name())
 
-    curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
+    curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
 
     if curried_args is None:
         raise Exception("Expected CAT")
@@ -170,7 +169,7 @@ async def unwind_coin_spend(
     if parent is None:
         raise Exception("Parent coin does not exist")
 
-    parent_curried_args = match_cat_puzzle(uncurry_puzzle(parent.puzzle_reveal.to_program()))
+    parent_curried_args = match_cat_puzzle(uncurry_puzzle(parent.puzzle_reveal))
 
     if parent_curried_args is None:
         raise Exception("Expected parent to be CAT")
@@ -191,7 +190,7 @@ async def unwind_coin_spend(
     cat_spend = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
 
     # Throw an error before pushing to full node if spend is invalid
-    _ = cat_spend.coin_spends[0].puzzle_reveal.run_with_cost(0, cat_spend.coin_spends[0].solution)
+    _ = run_with_cost(cat_spend.coin_spends[0].puzzle_reveal, 0, cat_spend.coin_spends[0].solution)
 
     return cat_spend
 
