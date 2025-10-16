@@ -50,6 +50,7 @@ ignore = [
     # Flake8 async
     # Should probably fix these
     "ASYNC230", # blocking-open-call-in-async-function
+    "ASYNC250", # blocking-input-call-in-async-function
     # Should probably fix these after dealing with shielding for anyio
     "ASYNC109", # async-function-with-timeout
 
