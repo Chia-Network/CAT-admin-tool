@@ -5,7 +5,7 @@ import os
 from collections import defaultdict
 from collections.abc import Coroutine
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import click
 from chia.cmds.cmds_util import get_wallet
@@ -228,7 +228,7 @@ async def app(
     secure_the_bag_targets_path: str,
     leaf_width: int,
     tail_hash_bytes: bytes32,
-    unwind_target_puzzle_hash_bytes: Optional[bytes32],
+    unwind_target_puzzle_hash_bytes: bytes32 | None,
     genesis_coin_id: bytes32,
     fingerprint: int,
     wallet_id: int,
