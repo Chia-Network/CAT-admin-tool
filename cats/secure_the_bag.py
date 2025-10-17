@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import re
 from collections.abc import Iterable
-from typing import Any, Union
+from typing import Any
 
 import click
 from chia.types.blockchain_format.coin import Coin
@@ -34,7 +34,7 @@ def append_include(search_paths: Iterable[str]) -> list[str]:
         return ["./include"]
 
 
-def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> Program:
+def parse_program(program: str | Program, include: Iterable[str] = []) -> Program:
     prog: Program
     if isinstance(program, Program):
         return program
@@ -109,7 +109,7 @@ def batch_the_bag(targets: list[Target], leaf_width: int) -> list[list[Target]]:
 def secure_the_bag(
     targets: list[Target],
     leaf_width: int,
-    asset_id: Union[bytes32, None] = None,
+    asset_id: bytes32 | None = None,
     parent_puzzle_lookup: dict[str, TargetCoin] = {},
 ) -> tuple[bytes32, dict[str, TargetCoin]]:
     """
@@ -169,8 +169,8 @@ def parent_of_puzzle_hash(
     genesis_coin_name: bytes32,
     puzzle_hash: bytes32,
     parent_puzzle_lookup: dict[str, TargetCoin],
-) -> tuple[Union[CoinSpend, None], bytes32]:
-    parent: Union[TargetCoin, None] = parent_puzzle_lookup.get(puzzle_hash.hex())
+) -> tuple[CoinSpend | None, bytes32]:
+    parent: TargetCoin | None = parent_puzzle_lookup.get(puzzle_hash.hex())
 
     if parent is None:
         return None, genesis_coin_name
@@ -183,7 +183,7 @@ def parent_of_puzzle_hash(
     return make_spend(coin, parent.puzzle, Program.to([])), coin.name()
 
 
-def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount: Union[int, None]) -> list[Target]:
+def read_secure_the_bag_targets(secure_the_bag_targets_path: str, target_amount: int | None) -> list[Target]:
     """
     Reads secure the bag targets file. Validates the net amount sent to targets is equal to the target amount.
     """
