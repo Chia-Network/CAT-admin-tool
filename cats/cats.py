@@ -6,7 +6,7 @@ import re
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import click
 from chia.cmds.cmds_util import get_wallet_client
@@ -37,7 +37,7 @@ from clvm_tools.clvmc import compile_clvm_text
 # Loading the client requires the standard chia root directory configuration that all of the chia commands rely on
 @asynccontextmanager
 async def get_context_manager(
-    wallet_rpc_port: Optional[int], fingerprint: int, root_path: Path
+    wallet_rpc_port: int | None, fingerprint: int, root_path: Path
 ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
     config = load_config(root_path, "config.yaml")
     wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
@@ -46,7 +46,7 @@ async def get_context_manager(
 
 
 async def get_signed_tx(
-    wallet_rpc_port: Optional[int],
+    wallet_rpc_port: int | None,
     fingerprint: int,
     ph: bytes32,
     amt: uint64,
@@ -66,7 +66,7 @@ async def get_signed_tx(
 
 
 async def push_tx(
-    wallet_rpc_port: Optional[int],
+    wallet_rpc_port: int | None,
     fingerprint: int,
     bundle: WalletSpendBundle,
     root_path: Path,
@@ -88,7 +88,7 @@ def append_include(search_paths: Iterable[str]) -> list[str]:
         return ["./include"]
 
 
-def parse_program(program: Union[str, Program], include: Iterable[str] = []) -> Program:
+def parse_program(program: str | Program, include: Iterable[str] = []) -> Program:
     prog: Program
     if isinstance(program, Program):
         return program
@@ -255,7 +255,7 @@ def cli(
     amount: int,
     fee: int,
     authorized_provider: list[str],
-    proofs_checker: Optional[str],
+    proofs_checker: str | None,
     cr_flag: list[str],
     fingerprint: int,
     signature: list[str],
@@ -265,7 +265,7 @@ def cli(
     quiet: bool,
     push: bool,
     root_path: str,
-    wallet_rpc_port: Optional[int],
+    wallet_rpc_port: int | None,
 ) -> None:
     ctx.ensure_object(dict)
 
@@ -301,7 +301,7 @@ async def cmd_func(
     amount: int,
     fee: int,
     authorized_provider: list[str],
-    proofs_checker: Optional[str],
+    proofs_checker: str | None,
     cr_flag: list[str],
     fingerprint: int,
     signature: list[str],
@@ -311,7 +311,7 @@ async def cmd_func(
     quiet: bool,
     push: bool,
     root_path: str,
-    wallet_rpc_port: Optional[int],
+    wallet_rpc_port: int | None,
 ) -> None:
     parsed_tail: Program = parse_program(tail)
     curried_args = [assemble(arg) for arg in curry]
