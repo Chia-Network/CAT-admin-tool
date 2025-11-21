@@ -24,7 +24,7 @@ from chia.wallet.conditions import AssertAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
-from chia.wallet.wallet_request_types import LogIn, PushTX
+from chia.wallet.wallet_request_types import GetNextAddress, LogIn, PushTX, SelectCoins
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import CoinSpend, G2Element
@@ -275,14 +275,20 @@ async def app(
             )
 
             if unwind_fee > 0:
-                fee_coins = await wallet_client.select_coins(
-                    amount=unwind_fee,
-                    wallet_id=wallet_id,
-                    coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG,
+                fee_coins_response = await wallet_client.select_coins(
+                    request=SelectCoins.from_coin_selection_config(
+                        amount=uint64(unwind_fee),
+                        wallet_id=uint32(wallet_id),
+                        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG,
+                    )
                 )
+
+                fee_coins = fee_coins_response.coins
                 change_amount = sum([c.amount for c in fee_coins]) - unwind_fee
-                change_address = await wallet_client.get_next_address(wallet_id=wallet_id, new_address=False)
-                change_ph = decode_puzzle_hash(change_address)
+                change_address = await wallet_client.get_next_address(
+                    request=GetNextAddress(wallet_id=uint32(wallet_id), new_address=False)
+                )
+                change_ph = decode_puzzle_hash(change_address.address)
 
                 # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
                 cat_announcements: list[AssertAnnouncement] = []
@@ -387,14 +393,19 @@ async def app(
                     if unwind_fee > 0:
                         spend_bundle_fee = len(bundle_spends) * unwind_fee
 
-                        fee_coins = await wallet_client.select_coins(
-                            amount=spend_bundle_fee,
-                            wallet_id=wallet_id,
-                            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG,
+                        fee_coins_response = await wallet_client.select_coins(
+                            request=SelectCoins.from_coin_selection_config(
+                                amount=uint64(spend_bundle_fee),
+                                wallet_id=uint32(wallet_id),
+                                coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG,
+                            )
                         )
+                        fee_coins = fee_coins_response.coins
                         change_amount = sum([c.amount for c in fee_coins]) - spend_bundle_fee
-                        change_address = await wallet_client.get_next_address(wallet_id=wallet_id, new_address=False)
-                        change_ph = decode_puzzle_hash(change_address)
+                        change_address = await wallet_client.get_next_address(
+                            request=GetNextAddress(wallet_id=uint32(wallet_id), new_address=False)
+                        )
+                        change_ph = decode_puzzle_hash(change_address.address)
 
                         # Fees depend on announcements made by secure the bag CATs to ensure they can't be seperated
                         cat_announcements = []
