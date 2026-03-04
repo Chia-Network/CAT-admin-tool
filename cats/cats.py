@@ -24,7 +24,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
-from chia.wallet.wallet_request_types import PushTX
+from chia.wallet.wallet_request_types import Addition, CreateSignedTransaction, PushTX
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import AugSchemeMPL, G2Element
@@ -58,9 +58,8 @@ async def get_signed_tx(
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
         signed_tx = await wallet_client.create_signed_transactions(
-            [{"puzzle_hash": ph, "amount": amt}],
-            DEFAULT_TX_CONFIG,
-            fee=fee,  # TODO: no default tx config
+            CreateSignedTransaction(additions=[Addition(amount=amt, puzzle_hash=ph)], fee=fee),
+            tx_config=DEFAULT_TX_CONFIG,
         )
         return signed_tx.signed_tx
 

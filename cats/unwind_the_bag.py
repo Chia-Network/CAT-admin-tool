@@ -24,7 +24,14 @@ from chia.wallet.conditions import AssertAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
-from chia.wallet.wallet_request_types import GetNextAddress, LogIn, PushTX, SelectCoins
+from chia.wallet.wallet_request_types import (
+    Addition,
+    CreateSignedTransaction,
+    GetNextAddress,
+    LogIn,
+    PushTX,
+    SelectCoins,
+)
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia_rs import CoinSpend, G2Element
@@ -303,9 +310,11 @@ async def app(
 
                 # Create signed coin spends and change for fees
                 fees_tx = await wallet_client.create_signed_transactions(
-                    [{"amount": change_amount, "puzzle_hash": change_ph}],
-                    coins=fee_coins,
-                    fee=uint64(unwind_fee),
+                    CreateSignedTransaction(
+                        additions=[Addition(amount=uint64(change_amount), puzzle_hash=change_ph)],
+                        coins=fee_coins,
+                        fee=uint64(unwind_fee),
+                    ),
                     extra_conditions=(*cat_announcements,),
                     tx_config=DEFAULT_TX_CONFIG,
                 )
@@ -420,9 +429,11 @@ async def app(
 
                         # Create signed coin spends and change for fees
                         fees_tx = await wallet_client.create_signed_transactions(
-                            [{"amount": change_amount, "puzzle_hash": change_ph}],
-                            coins=fee_coins,
-                            fee=uint64(spend_bundle_fee),
+                            CreateSignedTransaction(
+                                additions=[Addition(amount=uint64(change_amount), puzzle_hash=change_ph)],
+                                coins=fee_coins,
+                                fee=uint64(spend_bundle_fee),
+                            ),
                             extra_conditions=(*cat_announcements,),
                             tx_config=DEFAULT_TX_CONFIG,
                         )
