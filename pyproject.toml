@@ -1,6 +1,51 @@
 [build-system]
 requires = [
     "setuptools>=80",
-    "setuptools_scm[toml]>=8",
+    "setuptools_scm>=8",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "CAT_admin_tool"
+description = "Tools to administer issuance and redemption of a Chia Asset Token or CAT"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "CNI", email = "hello@chia.net" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Security :: Cryptography",
+]
+dependencies = [
+    "chia-blockchain==2.6.0",
+]
+optional-dependencies = { dev = [
+    "pytest",
+    "pytest-asyncio>=0.26.0",
+    "pytest-env",
+    "pre-commit==4.5.1; python_version >= '3.10'",
+    "mypy==1.19.1",
+    "types-setuptools",
+    "ruff==0.15.2",
+] }
+dynamic = ["version"]
+
+[project.urls]
+"Bug Reports" = "https://github.com/Chia-Network/cat-admin-tool"
+"Source" = "https://github.com/Chia-Network/cat-admin-tool"
+"Homepage" = "https://github.com/Chia-Network"
+
+[project.scripts]
+cats = "cats.cats:main"
+secure_the_bag = "cats.secure_the_bag:main"
+unwind_the_bag = "cats.unwind_the_bag:main"
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+[tool.setuptools_scm]
