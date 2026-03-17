@@ -18,7 +18,7 @@ dev_dependencies = [
     "pre-commit==4.5.1; python_version >= '3.10'",
     "mypy==1.19.1",
     "types-setuptools",
-    "ruff==0.15.2",
+    "ruff==0.15.5",
 ]
 
 setup(
