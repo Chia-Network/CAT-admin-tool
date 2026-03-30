@@ -255,7 +255,7 @@ async def app(
     )
     if fingerprint is not None:
         print(f"Setting fingerprint: {fingerprint}")
-        await wallet_client.log_in(LogIn(uint32(fingerprint)))
+        await wallet_client.log_in(LogIn(fingerprint=uint32(fingerprint)))
 
     targets = read_secure_the_bag_targets(secure_the_bag_targets_path, None)
     _, parent_puzzle_lookup = secure_the_bag(targets, leaf_width, tail_hash_bytes)
@@ -324,7 +324,7 @@ async def app(
 
                 await wallet_client.push_tx(
                     PushTX(
-                        WalletSpendBundle(
+                        spend_bundle=WalletSpendBundle(
                             cat_spend.coin_spends + fees_tx.signed_tx.spend_bundle.coin_spends,
                             fees_tx.signed_tx.spend_bundle.aggregated_signature,
                         )
@@ -332,7 +332,7 @@ async def app(
                 )
             else:
                 await wallet_client.push_tx(
-                    PushTX(WalletSpendBundle(cat_spend.coin_spends, cat_spend.aggregated_signature))
+                    PushTX(spend_bundle=WalletSpendBundle(cat_spend.coin_spends, cat_spend.aggregated_signature))
                 )
 
             print("Transaction pushed to full node")
@@ -442,7 +442,7 @@ async def app(
 
                         await wallet_client.push_tx(
                             PushTX(
-                                WalletSpendBundle(
+                                spend_bundle=WalletSpendBundle(
                                     bundle_spends + fees_tx.signed_tx.spend_bundle.coin_spends,
                                     fees_tx.signed_tx.spend_bundle.aggregated_signature,
                                 )
@@ -450,7 +450,7 @@ async def app(
                         )
                     else:
                         await wallet_client.push_tx(
-                            PushTX(WalletSpendBundle(bundle_spends, cat_spend.aggregated_signature))
+                            PushTX(spend_bundle=WalletSpendBundle(bundle_spends, cat_spend.aggregated_signature))
                         )
 
                     print(

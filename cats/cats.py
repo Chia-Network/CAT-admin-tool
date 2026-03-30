@@ -74,7 +74,7 @@ async def push_tx(
         wallet_client, _, _ = client_etc
         if wallet_client is None:
             raise ValueError("Error getting wallet client. Make sure wallet is running.")
-        return await wallet_client.push_tx(PushTX(bundle))
+        return await wallet_client.push_tx(PushTX(spend_bundle=bundle))
 
 
 # The clvm loaders in this library automatically search for includable files in the directory './include'
