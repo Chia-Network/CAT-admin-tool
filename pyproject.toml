@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Security :: Cryptography",
 ]
 dependencies = [
-    "chia-blockchain==2.6.0",
+    "chia-blockchain==2.7.0",
 ]
 optional-dependencies = { dev = [
     "pytest",
