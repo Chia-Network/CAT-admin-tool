@@ -26,7 +26,7 @@ jobs:
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      BLOCKS_AND_PLOTS_VERSION: 0.45.8
 
     steps:
       - name: Checkout Code
