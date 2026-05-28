@@ -31,7 +31,7 @@ optional-dependencies = { dev = [
     "pre-commit==4.6.0; python_version >= '3.10'",
     "mypy==2.1.0",
     "types-setuptools",
-    "ruff==0.15.12",
+    "ruff==0.15.14",
 ] }
 dynamic = ["version"]
 
