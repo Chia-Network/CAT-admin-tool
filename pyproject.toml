@@ -13,9 +13,9 @@ license = { text = "Apache-2.0" }
 authors = [
     { name = "CNI", email = "hello@chia.net" },
 ]
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
@@ -28,7 +28,7 @@ optional-dependencies = { dev = [
     "pytest",
     "pytest-asyncio>=0.26.0",
     "pytest-env",
-    "pre-commit==4.6.2; python_version >= '3.10'",
+    "pre-commit==4.7.0",
     "mypy==2.4.0",
     "types-setuptools",
     "ruff==0.16.6",
