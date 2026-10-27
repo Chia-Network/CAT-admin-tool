@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, Iterable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -38,7 +38,7 @@ from clvm_tools.clvmc import compile_clvm_text
 @asynccontextmanager
 async def get_context_manager(
     wallet_rpc_port: int | None, fingerprint: int, root_path: Path
-) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
+) -> AsyncGenerator[tuple[WalletRpcClient, int, dict[str, Any]], None]:
     config = load_config(root_path, "config.yaml")
     wallet_rpc_port = config["wallet"]["rpc_port"] if wallet_rpc_port is None else wallet_rpc_port
     async with get_wallet_client(root_path=root_path, wallet_rpc_port=wallet_rpc_port, fingerprint=fingerprint) as args:
